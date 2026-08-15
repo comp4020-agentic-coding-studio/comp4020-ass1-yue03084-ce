@@ -20,10 +20,15 @@ and see `spec/README.md` for how the checks in this repo relate to it.
 - Keep the dev server running (`pnpm dev`) so you see changes as you make them.
 - Before you push, run `pnpm check`. It runs most of what CI runs --- build,
   lint, and the spec --- so you catch those in seconds instead of waiting for
-  the pipeline. The links check, the evidence check, the secrets scan, and the
-  deploy itself only run in CI; run `pnpm dlx linkinator ./dist --silent`
-  locally against a fresh `pnpm build` for the links check without waiting for
-  CI.
+  the pipeline. The evidence check and the secrets scan only run in CI; the
+  links check and the deploy itself only run in CI too, but you can reproduce
+  the links check locally: this site uses an explicit Astro `base` (see the
+  note in `astro.config.mjs`), so linkinator has to crawl a server that
+  actually serves under that base path, not the raw `dist/` folder --- run
+  `pnpm build`, then `pnpm preview` in one terminal, then in another
+  `pnpm dlx linkinator "http://localhost:4321/comp4020-ass1-yue03084-ce/"
+  --recurse --silent`. Pointing linkinator at `./dist` directly reports every
+  internal link as broken, because it doesn't know about the base prefix.
 - To see what the page actually looks like rather than what you assume it looks
   like, open it in a browser (the `agent-browser` CLI, documented on
   [the course site](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/backpressure/#agent-browser-the-rendered-page-as-ground-truth),
@@ -148,6 +153,17 @@ means building legibly is part of building well.
 - **This file is process evidence.** The harness you build to direct the agent,
   this `CLAUDE.md` and any `AGENTS.md`, is itself read as part of how you
   worked. Keep it honest and current (see below).
+- **Don't draft `PROCESS.md`'s cited moments or `reflections/*.md` for the
+  student, even to get `pnpm check:evidence` green.** These are graded as the
+  student's own first-person account; if the agent writes the substance, they
+  stop being evidence and become the exact "false account" risk the course's
+  integrity policy calls out. When these are due, ask specific questions
+  (which commit was the actual turning point and why, what would they do
+  differently next time) and drop the student's own words in verbatim, or
+  leave a skeleton with headings for them to fill in themselves. A rushed,
+  generic reflection the student wrote is worth more than a polished one the
+  agent wrote — don't optimize for the check going green over the account
+  being real.
 
 You don't need a name, a student number, or any identity file in the repo: we
 know whose repo it is. Spend the effort on the work.
