@@ -219,6 +219,27 @@ const BARS = [
       </figure>
 
       <figure class="film" data-testid="film">
+        {/* The whole idea in two lines, sitting where the confusion is. The
+            prose under "What just happened" says this properly and stays
+            exactly as it was; a reader in the middle of the diagram is not
+            going to scroll down for it, and the verdicts on the slabs only
+            appear once the stack is tipped.
+
+            Above the strip rather than beside it, because there is no beside:
+            .film measures 376px at 1920 and the label column and the dot lanes
+            between them use all of it. Above also puts it where the light
+            arrives — the same corner the exploded view's "Light from the
+            scene ↓" comes in at — and outside .stack entirely, so it clears
+            the layer labels and dots by construction and, unlike that key, it
+            does not fade out when the stack collapses.
+
+            Announced, not aria-hidden like the strip and the stack below it.
+            Twelve colours read aloud are noise; two sentences are the point. */}
+        <ul class="rulecard" data-testid="rule">
+          <li class="rulecard__line">Light present → that layer's dye gets stuck.</li>
+          <li class="rulecard__line">Light missing → that dye climbs up and paints the picture.</li>
+        </ul>
+
         {/* The caption underneath says left-to-right here is top-to-bottom of
             the marked column, and a reader should not have to take that on
             trust. This is that column, laid sideways over the lanes it

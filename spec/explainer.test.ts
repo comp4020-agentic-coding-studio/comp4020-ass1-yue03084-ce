@@ -289,6 +289,30 @@ describe("the exploded view explains the exposure", () => {
   });
 });
 
+describe("the rule card states the rule at the diagram", () => {
+  const card = doc.querySelector<HTMLElement>('[data-testid="rule"]');
+
+  it("ships both halves of the rule in the HTML", () => {
+    // Both halves or neither: one of these on its own is the half that makes
+    // Polaroid film sound backwards.
+    const lines = [...(card?.querySelectorAll(".rulecard__line") ?? [])].map((l) =>
+      l.textContent?.trim() ?? ""
+    );
+    expect(lines.length, "the card has to be in the shipped HTML, not drawn by script").toBe(2);
+    expect(lines[0]).toMatch(/light present.*stuck/i);
+    expect(lines[1]).toMatch(/light missing.*climbs/i);
+  });
+
+  it("is readable without tipping the stack", () => {
+    // The verdicts on the slabs say the same thing per layer, but they are
+    // display:none until the stack is exploded, and .rays__key fades with them.
+    // This one is the version a reader gets for free, so it must not live
+    // inside .stack — which is aria-hidden and tipped — at all.
+    expect(card?.closest(".stack"), "inside the stack it inherits both the tilt and the aria-hidden").toBeNull();
+    expect(card?.closest("[aria-hidden]")).toBeNull();
+  });
+});
+
 describe("the strip over the lanes maps the photo onto the diagram", () => {
   const strip = doc.querySelector<HTMLElement>('[data-testid="colstrip"]');
   const cells = doc.querySelectorAll<HTMLElement>(".colstrip__cell");

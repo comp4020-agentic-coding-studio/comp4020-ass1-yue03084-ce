@@ -253,6 +253,26 @@ figcaption {
 
 /* --- the film stack ----------------------------------------------------- */
 
+/* A legend, so it is bordered and quiet rather than another paragraph: the
+   reader should be able to glance at it and go back to the diagram. Nothing
+   here fixes a height — the lines wrap to three at a narrow width and the card
+   simply grows, which is the one thing a box of text next to this stack is
+   allowed to do. */
+.rulecard {
+  margin: 0 0 0.6rem;
+  padding: 0.4rem 0.6rem;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--dim);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.rulecard__line + .rulecard__line {
+  margin-top: 0.1rem;
+}
+
 /* The strip is positioned off the same two numbers the lanes are, handed down
    from the markup: the band starts half a lane-pitch left of the first dot and
    ends half a pitch right of the last, so twelve equal cells put one centre on
