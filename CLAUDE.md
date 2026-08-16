@@ -52,6 +52,49 @@ and see `spec/README.md` for how the checks in this repo relate to it.
   --- print the `mtime` of the `dist/index.html` it read --- and must open a
   fresh tab per measurement. If a probe says nothing changed, suspect the probe
   before the code.
+- **Anything with a fixed height has to be measured, not looked at.** A slab in
+  the cross-section is a percentage of a fixed stack height, so text put into
+  one either fits or silently spills under the slab below it. The phone verdict
+  overflowed by three pixels: invisible in a screenshot, obvious the moment
+  something read `scrollHeight` against `clientHeight`. So when you add text to
+  a box whose height the content doesn't get to set, measure that pair before
+  you say it fits --- and measure it at 390 as well as 1920, because the box
+  shrinks and the sentence doesn't.
+- **One fact, one piece of code.** The page says "did this column expose that
+  layer?" in two places --- the verdict printed on the slab, and the sentence
+  the marker reads out. They started as two calculations of the same thing,
+  which is a page that can tell you cyan stalls here while the slab beside it
+  says the layer saw nothing. They now share one `share()`. If a fact appears
+  twice on screen, it comes from one function; if a piece of geometry appears
+  twice, it comes from one constant. Two sources for one fact is not
+  duplication you can clean up later --- it is a page that will eventually
+  contradict itself in front of a reader.
+- **Default to incremental.** Unless the request says otherwise: don't
+  restructure the page, don't rewrite copy that is already there, don't break an
+  interaction that already works. Attach the new thing to what exists. And for
+  each new feature, say back two things before building it --- **when it
+  updates** and **what must not change**. The exploded view's beams are painted
+  from `resample()` rather than `show()` entirely because answering "when does
+  this update?" first made it obvious that exposure happens once, in the camera,
+  and is the one thing on the page that is not a function of the clock.
+- **stylelint here is mostly about where a rule sits, not what it says.** Three
+  of its rules have cost a build-and-retry more than once: a less specific
+  selector may not come after a more specific one matching the same element
+  (`no-descending-specificity` --- this is why the exploded-view `.layer__note`
+  rule lives down beside `.layer--reagent` and not next to `.layer__verdict`); a
+  blank line before a declaration that follows another declaration is an error
+  unless a comment sits between them (`declaration-empty-line-before`); and a
+  comment needs a blank line before it (`comment-empty-line-before`). None of
+  these show up until `pnpm check` reaches lint, which is after the build, so
+  getting them right while writing costs nothing and getting them wrong costs a
+  whole round.
+- Two CSS facts that fail *silently*, which is why they are written down rather
+  than remembered. An `opacity` below 1 forces `transform-style: flat` on that
+  element's subtree, so a fade put on a 3-D container flattens the thing it was
+  meant to fade --- put it on the leaf. And `calc(a + -0.5 * b)` is a parse most
+  of the way to nonsense: emit the sign explicitly. A gradient that fails to
+  parse doesn't warn, it just doesn't paint, and an element that never appears
+  looks exactly like an element you forgot to write.
 - When a check fails, read its output before changing anything. Each check below
   names what it measures, and the failure message is the instruction: it tells
   you the file, the line, or the contract. Treat a red check as authoritative
