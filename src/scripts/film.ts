@@ -13,16 +13,26 @@ export interface Scene {
   readonly stuck: readonly TeamId[];
 }
 
-/** One rule, four readings of it: light of a colour exposes the layer
+/** One rule, five readings of it: light of a colour exposes the layer
  *  sensitive to that colour, and that layer's dye is the one held back. The
  *  two ends are what make it a rule rather than a trick — white light exposes
  *  everything, so nothing arrives and the print stays white; the dark exposes
- *  nothing, so every dye arrives and the print goes black. */
+ *  nothing, so every dye arrives and the print goes black.
+ *
+ *  The cake is the only one that stalls two dyes without stalling all three,
+ *  which is the reading the first four were missing: its sponge is bright in
+ *  red and green and dark in blue, so cyan and magenta both run out of road and
+ *  yellow does not — a secondary colour out of the same rule that gives the
+ *  other four their primaries. This one number is the *whole frame* as one
+ *  colour, and the frame is a stack of six; what the reader is actually meant to
+ *  do with the cake is drag the slice marker down it, where the canvas answers
+ *  the rule separately at every height. */
 export const SCENES: readonly Scene[] = [
   { id: "red", label: "A red apple", stuck: ["cyan"] },
   { id: "green", label: "A green leaf", stuck: ["magenta"] },
   { id: "blue", label: "Blue sky", stuck: ["yellow"] },
   { id: "white", label: "White paper", stuck: ["cyan", "magenta", "yellow"] },
+  { id: "cake", label: "A slice of cake", stuck: ["cyan", "magenta"] },
 ];
 
 export const RED_APPLE: Scene = SCENES[0];

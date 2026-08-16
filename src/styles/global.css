@@ -1009,16 +1009,18 @@ html[data-explode="true"] .layer {
   cursor: pointer;
   background: #fff;
 
-  /* Overridden per pill below; the fallback keeps a fifth subject, if one is
+  /* Overridden per pill below; the fallback keeps a sixth subject, if one is
      ever added, from selecting into an undefined colour. */
   --pill: var(--po-blue);
 }
 
 /* Spectrum order would put blue on the apple. The subject's own colour is the
    more useful answer: the pill for "a red apple" is red, so the picker already
-   says what is about to happen to the print before anything is pressed. Four of
-   the five brand colours cover it, and white paper takes orange because a
-   yellow pill on warm paper is not a pill. */
+   says what is about to happen to the print before anything is pressed. The
+   five brand colours cover the five subjects exactly, with white paper taking
+   orange and the cake taking yellow — the way round it has to be, because a
+   yellow pill on warm paper is not a pill, and the cake's own dominant colour
+   is its sponge. */
 .scene__opt:nth-of-type(1) {
   --pill: var(--po-red);
 }
@@ -1033,6 +1035,10 @@ html[data-explode="true"] .layer {
 
 .scene__opt:nth-of-type(4) {
   --pill: var(--po-orange);
+}
+
+.scene__opt:nth-of-type(5) {
+  --pill: var(--po-yellow);
 }
 
 .scene__opt input {

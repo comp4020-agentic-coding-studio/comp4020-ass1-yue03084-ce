@@ -1,4 +1,4 @@
-// The four subjects, drawn rather than downloaded. They are the *scene* — what
+// The five subjects, drawn rather than downloaded. They are the *scene* — what
 // was in front of the lens — not the print; the developing happens to them in
 // photo.ts. Drawing them in code keeps the page a single build artefact with no
 // image requests to 404 on the deployed base path, and it means each subject
@@ -162,11 +162,80 @@ const drawPaper: Draw = (ctx, s) => {
   ctx.restore();
 };
 
+/** A slice of cake, layered. Every other subject answers the rule once or twice
+ *  down the middle; this one answers it six times — cherry, cream, sponge, jam,
+ *  sponge, plate — which is the whole reason the slice marker exists, and the
+ *  reason this subject is in the list.
+ *
+ *  So the geometry is written in twelfths, because twelve is how many places the
+ *  column is sampled (SAMPLES in main.ts, and one swatch each in the strip over
+ *  the lanes). A layer that straddles a boundary is averaged with its neighbour
+ *  and both readings are lost; a layer that fills whole twelfths survives the
+ *  sampling intact. Gradients would do the same damage more quietly, which is
+ *  why every region here is one flat colour — this is the one subject where
+ *  shading would cost more than it bought. */
+const drawCake: Draw = (ctx, s) => {
+  // One twelfth of the frame: the unit the cross-section reads in.
+  const band = (n: number): number => (s * n) / 12;
+
+  ctx.fillStyle = "#eceae4";
+  ctx.fillRect(0, 0, s, s);
+
+  const ellipse = (cy: number, rx: number, ry: number, fill: string): void => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.ellipse(s * 0.5, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  // The plate first, so the slice can sit down into it rather than float above
+  // it. Rim and face are both blue: the column crosses the face, but a reader
+  // whose eye lands on the rim should get the same answer.
+  ellipse(band(10.9), s * 0.425, band(1.08), "#24578f");
+  ellipse(band(10.78), s * 0.385, band(0.92), "#2d6fc0");
+
+  // Cream, sponge, jam, sponge — each on a twelfth boundary, so bands 3–4 are
+  // pure cream, 5–6 and 8–9 pure sponge, and 7 pure jam. The jam gets one
+  // twelfth to the sponges' two because that is what jam looks like.
+  const x = s * 0.24;
+  const w = s * 0.52;
+  const layers: [number, number, string][] = [
+    [3, 5, "#fbf7ee"],
+    [5, 7, "#f0c04a"],
+    [7, 8, "#e05a91"],
+    [8, 10, "#f0c04a"],
+  ];
+  for (const [top, bottom, fill] of layers) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, band(top), w, band(bottom) - band(top));
+  }
+
+  ctx.strokeStyle = "rgb(122 96 58 / 26%)";
+  ctx.lineWidth = s * 0.006;
+  ctx.strokeRect(x, band(3), w, band(10) - band(3));
+
+  // Stem before cherry, so the cherry hides its base and the only stem left in
+  // the frame is well clear of the middle column.
+  ctx.strokeStyle = "#4f7a2e";
+  ctx.lineWidth = s * 0.014;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(s * 0.5, band(2.4));
+  ctx.quadraticCurveTo(s * 0.55, band(1.4), s * 0.575, band(0.85));
+  ctx.stroke();
+
+  // Radius 0.8 of a twelfth, centred at 2.32: band 2 is nothing but cherry, and
+  // bands 1 and 3 get an edge each. Six clean readings and two blends is the
+  // best a round thing on a rectangular grid can do.
+  ellipse(band(2.32), band(0.8), band(0.8), "#c9202f");
+};
+
 const DRAW: Record<string, Draw> = {
   red: drawApple,
   green: drawLeaf,
   blue: drawSky,
   white: drawPaper,
+  cake: drawCake,
 };
 
 // Drawing is a few hundred canvas ops; doing it on every slider frame would be

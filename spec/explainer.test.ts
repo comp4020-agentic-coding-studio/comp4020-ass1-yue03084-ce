@@ -176,6 +176,19 @@ describe("what the page claims about the film", () => {
     expect([...radios].filter((r) => r.hasAttribute("checked")).length, "exactly one starts selected").toBe(1);
   });
 
+  it("covers a secondary colour, not just the three primaries and white", () => {
+    // Four scenes stalled one dye or all three, so every print the page could
+    // make was a primary or white and the rule looked like it only had four
+    // answers. A scene that stalls exactly two is the case that shows it has
+    // eight: bright red and green with dark blue means cyan and magenta both
+    // run out of road, and what survives is yellow.
+    const two = SCENES.filter((s) => s.stuck.length === 2);
+    expect(two.length, "at least one scene has to land between one dye and all three").toBeGreaterThan(0);
+    const [r, g, b] = develop(1, two[0]).photo;
+    expect(Math.min(r, g), "the two stalled channels survive").toBeGreaterThan(200);
+    expect(b, "and the one that arrived is absorbed").toBeLessThan(60);
+  });
+
   it("reads as red once it clears, because cyan is the dye that got stuck", () => {
     const [r, g, b] = develop(1, RED_APPLE).photo;
     expect(r).toBeGreaterThan(200);

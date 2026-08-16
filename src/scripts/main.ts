@@ -75,16 +75,47 @@ function resample(): void {
   samples = view ? view.column(sliceX, SAMPLES) : [];
 }
 
-/** Which dyes this column holds back, for the marker's accessible name. */
+const list = (xs: readonly string[]): string =>
+  xs.length < 2 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+
+/** Which dyes this column holds back, for the marker's accessible name.
+ *
+ *  A column is twelve samples and it does not have to agree with itself. This
+ *  took a bare majority vote until the cake went in: measured at 50% across,
+ *  cyan stalled in 10 samples, magenta in 8 and yellow in 7, so all three
+ *  cleared the half-way bar and the marker announced "every dye stalls here, so
+ *  this column stays white" about a column that runs red, white, yellow, pink,
+ *  yellow, blue. The same probe caught blue sky making the same claim with half
+ *  the column open sky, and the leaf saying nothing stalls while magenta stalls
+ *  in half of it — so this was never only the cake's problem, it was a bug the
+ *  cake made impossible to miss.
+ *
+ *  So each dye is reported by how much of the column it stalls in, and a dye
+ *  only speaks for the whole column if it stalls nearly everywhere. Three
+ *  quarters, not a majority: it is the difference between a fact about the
+ *  column and a fact about most of it, and a screen reader user has no strip to
+ *  glance at and check it against. */
 function sliceSummary(): string {
-  if (!samples.length) return `${Math.round(sliceX * 100)}% across`;
-  const held = (["cyan", "magenta", "yellow"] as TeamId[]).filter(
-    (team) => samples.filter((s) => exposureOf(team, s) >= 0.5).length > samples.length / 2,
-  );
   const where = `${Math.round(sliceX * 100)}% across`;
-  if (held.length === 3) return `${where} — every dye stalls here, so this column stays white`;
-  if (!held.length) return `${where} — nothing stalls here, so every dye arrives and it goes dark`;
-  return `${where} — ${held.join(" and ")} stall${held.length === 1 ? "s" : ""} here`;
+  if (!samples.length) return where;
+
+  const teams: TeamId[] = ["cyan", "magenta", "yellow"];
+  const share = (team: TeamId): number =>
+    samples.filter((s) => exposureOf(team, s) >= 0.5).length / samples.length;
+
+  const all = teams.filter((team) => share(team) >= 0.75);
+  const some = teams.filter((team) => share(team) >= 0.25 && share(team) < 0.75);
+
+  if (all.length === 3) return `${where} — every dye stalls here, so this column stays white`;
+  if (!all.length && !some.length) {
+    return `${where} — nothing stalls here, so every dye arrives and it goes dark`;
+  }
+
+  const whole = `${list(all)} stall${all.length === 1 ? "s" : ""} the whole way down`;
+  const part = `${list(some)} stall${some.length === 1 ? "s" : ""} in part of it`;
+  if (!some.length) return `${where} — ${whole}`;
+  if (!all.length) return `${where} — ${part}`;
+  return `${where} — ${whole}, ${list(some)} only in part of it`;
 }
 
 // --- one frame ------------------------------------------------------------
