@@ -177,57 +177,101 @@ const drawPaper: Draw = (ctx, s) => {
 const drawCake: Draw = (ctx, s) => {
   // One twelfth of the frame: the unit the cross-section reads in.
   const band = (n: number): number => (s * n) / 12;
+  const mid = s * 0.5;
 
-  ctx.fillStyle = "#eceae4";
+  ctx.fillStyle = "#e8e4da";
   ctx.fillRect(0, 0, s, s);
 
   const ellipse = (cy: number, rx: number, ry: number, fill: string): void => {
     ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.ellipse(s * 0.5, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.ellipse(mid, cy, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
   };
 
-  // The plate first, so the slice can sit down into it rather than float above
-  // it. Rim and face are both blue: the column crosses the face, but a reader
-  // whose eye lands on the rim should get the same answer.
-  ellipse(band(10.9), s * 0.425, band(1.08), "#24578f");
-  ellipse(band(10.78), s * 0.385, band(0.92), "#2d6fc0");
+  // Shadow, rim, face. The plate is drawn before the cake and reaches up to
+  // band 10, so the cake's bottom edge lands inside it and the slice is sitting
+  // in the plate rather than balanced on its front lip — the ellipse is widest
+  // at the middle, so a plate whose top only just clears the centre leaves the
+  // cake's bottom corners hanging over nothing.
+  ellipse(band(11.72), s * 0.407, band(0.32), "rgb(96 88 76 / 15%)");
+  ellipse(band(10.84), s * 0.353, band(1.08), "#2b5480");
+  ellipse(band(10.6), s * 0.367, band(1.08), "#4477ad");
 
-  // Cream, sponge, jam, sponge — each on a twelfth boundary, so bands 3–4 are
-  // pure cream, 5–6 and 8–9 pure sponge, and 7 pure jam. The jam gets one
-  // twelfth to the sponges' two because that is what jam looks like.
-  const x = s * 0.24;
-  const w = s * 0.52;
+  // 180 wide by 127.5 tall at s=300: wider than it is tall, which is what makes
+  // it read as a slice rather than a tower. The sponge/jam/sponge body is the
+  // full width; the frosting overhangs it by a few pixels on each side, because
+  // a cap flush with the sides reads as another stripe.
+  const bodyX = s * 0.2;
+  const bodyW = s * 0.6;
+  const capX = s * 0.187;
+  const capW = s * 0.626;
+
+  // Sponge, jam, sponge. The jam is thinner than either sponge, and sits inside
+  // one twelfth rather than filling it: at 20px of a 25px band it still carries
+  // that band's average to pink, and staying off the boundaries keeps the two
+  // sponges whole. Every fill is flat — a gradient inside a region would blur
+  // two readings into one exactly where the marker is meant to separate them.
   const layers: [number, number, string][] = [
-    [3, 5, "#fbf7ee"],
-    [5, 7, "#f0c04a"],
-    [7, 8, "#e05a91"],
-    [8, 10, "#f0c04a"],
+    [band(6), band(8.08), "#f2c65a"],
+    [band(8.08), band(8.88), "#e5619a"],
+    [band(8.88), band(10), "#f2c65a"],
   ];
   for (const [top, bottom, fill] of layers) {
     ctx.fillStyle = fill;
-    ctx.fillRect(x, band(top), w, band(bottom) - band(top));
+    ctx.fillRect(bodyX, top, bodyW, bottom - top);
   }
 
-  ctx.strokeStyle = "rgb(122 96 58 / 26%)";
-  ctx.lineWidth = s * 0.006;
-  ctx.strokeRect(x, band(3), w, band(10) - band(3));
+  // Depth, not stripes painted on a wall: one hairline of the sponge's own
+  // colour darkened, on each seam. Kept to 2px and 15% because the column
+  // crosses all three — at that weight they move a band's average by about a
+  // percent, which is under the noise the 5px-wide sample already has.
+  ctx.fillStyle = "rgb(150 108 58 / 15%)";
+  for (const y of [band(6), band(8.08), band(8.88)]) ctx.fillRect(bodyX, y, bodyW, s * 0.007);
 
-  // Stem before cherry, so the cherry hides its base and the only stem left in
-  // the frame is well clear of the middle column.
-  ctx.strokeStyle = "#4f7a2e";
-  ctx.lineWidth = s * 0.014;
+  // Drips before the cap, so the cap's edge runs across their tops and they
+  // read as one poured surface. Placed off centre on purpose: a drip hanging
+  // down the middle would put frosting inside the sponge's own twelfths.
+  const cream = "#fdfaf2";
+  ctx.fillStyle = cream;
+  for (const [x, depth] of [
+    [0.273, 0.72],
+    [0.393, 0.48],
+    [0.607, 0.6],
+    [0.727, 0.4],
+  ]) {
+    ctx.beginPath();
+    ctx.roundRect(s * x - s * 0.043, band(5.85), s * 0.086, band(0.15 + depth), [0, 0, 999, 999]);
+    ctx.fill();
+  }
+
+  // The cap: rounded at the top corners only, since the bottom of the cake is
+  // buried in the plate.
+  ctx.beginPath();
+  ctx.roundRect(capX, band(4.9), capW, band(6) - band(4.9), [s * 0.04, s * 0.04, 0, 0]);
+  ctx.fill();
+
+  // Stem before cherry, so its base is buried and the only stem in the frame is
+  // well clear of the middle column.
+  ctx.strokeStyle = "#4e9b3f";
+  ctx.lineWidth = s * 0.013;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(s * 0.5, band(2.4));
-  ctx.quadraticCurveTo(s * 0.55, band(1.4), s * 0.575, band(0.85));
+  ctx.moveTo(mid, band(3.36));
+  ctx.quadraticCurveTo(s * 0.53, band(2.64), s * 0.573, band(2.32));
   ctx.stroke();
 
-  // Radius 0.8 of a twelfth, centred at 2.32: band 2 is nothing but cherry, and
-  // bands 1 and 3 get an edge each. Six clean readings and two blends is the
-  // best a round thing on a rectangular grid can do.
-  ellipse(band(2.32), band(0.8), band(0.8), "#c9202f");
+  // Radius 0.96 of a twelfth centred at 4.16, so the cherry fills bands 3 and 4
+  // and its bottom sinks about five pixels into the frosting — sitting on it,
+  // which is also what keeps band 5 pure cream.
+  ellipse(band(4.16), band(0.96), band(0.96), "#d02b39");
+
+  // Left of the column by a clear margin, so the print stays one flat red where
+  // the cross-section reads it.
+  ctx.fillStyle = "rgb(255 255 255 / 60%)";
+  ctx.beginPath();
+  ctx.ellipse(s * 0.467, band(3.8), s * 0.017, s * 0.017, 0, 0, Math.PI * 2);
+  ctx.fill();
 };
 
 const DRAW: Record<string, Draw> = {
