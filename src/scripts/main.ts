@@ -16,7 +16,6 @@ import {
   type TeamId,
 } from "./film";
 import { attachPhoto, developedRgb, type Rgb } from "./photo";
-import { makeSound } from "./sound";
 
 const stack = document.querySelector<HTMLElement>(".stack");
 const clock = document.querySelector<HTMLElement>('[data-testid="clock"]');
@@ -38,14 +37,12 @@ const viewer = document.querySelector<HTMLElement>(".viewer");
 const printed = document.querySelector<HTMLElement>('[data-testid="print"]');
 const shutter = document.querySelector<HTMLButtonElement>('[data-testid="shutter"]');
 const pauseBtn = document.querySelector<HTMLButtonElement>('[data-testid="pause"]');
-const soundBtn = document.querySelector<HTMLButtonElement>('[data-testid="sound"]');
 const status = document.querySelector<HTMLElement>('[data-testid="status"]');
 const bars = new Map(
   [...document.querySelectorAll<HTMLElement>("[data-bar]")].map((el) => [el.dataset.bar, el]),
 );
 
 const view = canvas ? attachPhoto(canvas) : null;
-const sound = makeSound();
 
 // How many samples the cross-section takes down the column. The markup decides
 // — it drew the dots — so counting them here keeps one number in one place.
@@ -360,8 +357,6 @@ function eject(): void {
   resample();
   show();
 
-  sound.shutter();
-
   if (still.matches) {
     // No slide, no shake, no judder. The print is simply there — which is what
     // an instant camera looks like to someone who cannot watch the animation
@@ -383,7 +378,6 @@ function eject(): void {
   viewer.classList.add("is-ejecting");
   setTimeout(() => viewer.classList.remove("is-ejecting"), EJECT_MS);
 
-  sound.motor(EJECT_MS / 1000);
   if (status) status.textContent = "Print ejected. The rollers burst the pod; development starts now.";
   startPlaying();
 }
@@ -393,13 +387,6 @@ shutter?.addEventListener("click", eject);
 pauseBtn?.addEventListener("click", () => {
   stopPlaying();
   if (status) status.textContent = "Paused — the slider is yours.";
-});
-
-soundBtn?.addEventListener("click", () => {
-  const next = soundBtn.getAttribute("aria-pressed") !== "true";
-  soundBtn.setAttribute("aria-pressed", String(next));
-  soundBtn.textContent = next ? "Sound on" : "Sound off";
-  sound.setEnabled(next);
 });
 
 // --- the controls ---------------------------------------------------------

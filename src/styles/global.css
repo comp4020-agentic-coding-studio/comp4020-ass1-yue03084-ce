@@ -1372,11 +1372,6 @@ html[data-explode="true"] .ray {
   cursor: pointer;
 }
 
-.playbar__btn[aria-pressed="true"] {
-  border-color: var(--po-green);
-  box-shadow: inset 0 0 0 1px var(--po-green);
-}
-
 .playbar__btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
