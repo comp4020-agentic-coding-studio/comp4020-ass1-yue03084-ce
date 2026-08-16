@@ -61,15 +61,3 @@ wasn't repeating them any more.
      > back pressure的 -->
 
 [`bcccf70`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/commit/bcccf70)
-
-<!-- 还没用上的候选，想换掉上面任何一个就从这里拿：
-
-     - 探针在说谎：探针读了旧构建报「没变化」，改了本来就对的代码。两次。
-       6470655 / cc02556
-     - BEM 写进 stylelint 配置，而不是又发一条 prompt。7159b80
-     - 390px 下两个色块都 display:none，手机访客只有图没有结果。
-       8775b10...ab0ced7
-     - 键盘能 tab 到每个控件，一个都驱动不了。57e44ac
-     - 蛋糕暴露了 sliceSummary 的简单多数决 bug，蓝天也在撒谎。bd3a74a
-     - 声音：做成了机械声（量过，技术上是成的），然后整个删掉。
-       474146f...09143c9 -->
