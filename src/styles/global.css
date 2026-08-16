@@ -367,6 +367,109 @@ html[data-explode="true"] .layer {
     border-top: 1px solid var(--rule);
     box-shadow: 0 -4px 12px rgb(0 0 0 / 6%);
   }
+
+  /* Every pixel of the bar is a pixel of diagram the visitor cannot see, and
+     this line is the least load-bearing one in it: the slider is already
+     labelled and draggable, and arrow keys are a hint for a keyboard that a
+     390px viewport usually does not have. Hidden from the eye, not from the
+     accessibility tree — aria-describedby still points here and still reads. */
+  .hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* --- the scene picker --------------------------------------------------- */
+
+.scene {
+  border: 0;
+  margin: 1.5rem 0 1.1rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.scene__legend {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+
+  /* A legend is not a flex item, so it would sit in the row with the options
+     instead of above them. Full width puts it back on its own line without
+     giving up the fieldset/legend pairing a screen reader announces. */
+  width: 100%;
+}
+
+.scene__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  /* Measured at 34px tall before this: a thumb-sized target on the viewport
+     this is most likely to be read on, and under every published minimum.
+     min-height sets the floor; the padding only decides how much wider than
+     the text the pill sits. */
+  min-height: 2.75rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.scene__opt input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* The pill, not just the dot, shows which one is live, so the row reads at a
+   glance as a segmented control rather than four loose radios. */
+.scene__opt:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.scene__opt:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Measured, not guessed: on a 390x844 phone only 33px of a 352px diagram sat
+   above the sticky bar on landing, so the slider was draggable while the thing
+   it drives was off screen. Nothing here cuts an argument — it is the chrome
+   around it that gets tighter: less air at the top, a headline that does not
+   need desktop's scale, and a lede set at body size. Everything above the film
+   is still read in the same order, just in fewer pixels. */
+@media (width <= 34rem) {
+  body {
+    padding-top: 1.25rem;
+  }
+
+  nav {
+    margin-bottom: 1.25rem;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  .lede {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .scene {
+    margin-top: 0.9rem;
+  }
 }
 
 .clock {

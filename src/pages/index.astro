@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { SCENES } from "../scripts/film";
 
 // The film sandwich, top (viewing surface) to bottom, as percentages of the
 // stack's height. Runners climb from their home layer to the receiving layer,
@@ -53,9 +54,33 @@ const PER_TEAM = 7;
     </p>
 
     <p>
-      Drag the slider. Watch when the colour actually arrives, and when you are
-      first allowed to see it.
+      Drag the slider. Watch when the colour arrives, and when you are first
+      allowed to see it.
     </p>
+
+    {/* Above the film, not down in the sticky bar with the clock. The subject
+        is chosen once and then watched; the clock is dragged while watching,
+        and only that needs to follow you down the page. Keeping both in the
+        bar made it 301px tall on a 390px phone — 36% of the screen spent on
+        controls, most of them idle. Reading order agrees: point the camera at
+        something, then look at the film. */}
+    <fieldset class="scene">
+      <legend class="scene__legend">What the camera was pointed at</legend>
+      {
+        SCENES.map((s, i) => (
+          <label class="scene__opt">
+            <input
+              type="radio"
+              name="scene"
+              value={s.id}
+              checked={i === 0}
+              data-testid="scene"
+            />
+            <span>{s.label}</span>
+          </label>
+        ))
+      }
+    </fieldset>
 
     <div class="rig">
       <figure class="film" data-testid="film">
@@ -154,6 +179,12 @@ const PER_TEAM = 7;
         So the picture is painted by the dye that had no work to do. Photograph
         something red, and it is the cyan that gets stuck — leaving magenta and
         yellow to arrive at the top, where they read as red.
+      </p>
+      <p>
+        Change what the camera was pointed at and watch which team stalls. The
+        two ends are the ones that prove it is a rule and not a trick: white
+        light exposes every layer, so all three dyes have work, none of them
+        arrive, and the print stays the white of the reagent's own pigment.
       </p>
       <p>
         Meanwhile the reagent that started the race is opaque, which is why the

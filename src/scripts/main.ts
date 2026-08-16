@@ -4,8 +4,9 @@ import {
   develop,
   elapsedSeconds,
   formatClock,
-  RED_APPLE,
+  sceneById,
   TIMELINE,
+  type Scene,
   type TeamId,
 } from "./film";
 
@@ -21,8 +22,15 @@ const scrub = document.querySelector<HTMLInputElement>('[data-testid="time"]');
 const receive = document.querySelector<HTMLElement>(".layer--receive");
 const runners = document.querySelectorAll<HTMLElement>(".runner");
 
+const scenes = document.querySelectorAll<HTMLInputElement>('[data-testid="scene"]');
+
+// Which subject is in front of the camera. The radio group owns the truth; this
+// is only a cache of it, seeded from whichever radio is checked at load so a
+// selection the browser restored is honoured rather than overwritten.
+let scene: Scene = sceneById([...scenes].find((r) => r.checked)?.value);
+
 function render(t: number): void {
-  const frame = develop(t, RED_APPLE);
+  const frame = develop(t, scene);
 
   for (const runner of runners) {
     const team = runner.dataset.team as TeamId;
@@ -31,7 +39,7 @@ function render(t: number): void {
     const spread = 1 - lag * 0.15;
     const p = Math.min(1, Math.max(0, (frame.arrived[team] - lag * 0.15) / spread));
     runner.style.setProperty("--p", p.toFixed(4));
-    runner.dataset.stuck = String(RED_APPLE.stuck.includes(team) && t > TIMELINE.stuckHalt);
+    runner.dataset.stuck = String(scene.stuck.includes(team) && t > TIMELINE.stuckHalt);
   }
 
   for (const el of photos) {
@@ -49,11 +57,22 @@ function render(t: number): void {
   if (clock) clock.textContent = formatClock(elapsedSeconds(t));
 }
 
+const readScrub = (): number =>
+  scrub ? Number(scrub.value) / Number(scrub.max) : 0;
+
 if (scrub) {
-  const read = (): number => Number(scrub.value) / Number(scrub.max);
-  scrub.addEventListener("input", () => render(read()));
-  render(read());
+  scrub.addEventListener("input", () => render(readScrub()));
 }
+
+for (const radio of scenes) {
+  radio.addEventListener("change", () => {
+    if (!radio.checked) return;
+    scene = sceneById(radio.value);
+    render(readScrub());
+  });
+}
+
+render(readScrub());
 
 // The exploded view was pure CSS — html:has(#explode:checked) — until a probe
 // caught Chrome updating --tilt on the root while leaving the rules that

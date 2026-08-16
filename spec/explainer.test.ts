@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { develop, RED_APPLE, TEAMS, TIMELINE, type TeamId } from "../src/scripts/film";
+import { develop, RED_APPLE, SCENES, TEAMS, TIMELINE, type TeamId } from "../src/scripts/film";
 
 // The week's spec, turned into assertions. Two of its lines are mechanically
 // checkable: the visitor must be able to do something that changes what they
@@ -81,6 +81,43 @@ describe("what the page claims about the film", () => {
     for (const team of RED_APPLE.stuck) {
       expect(end.arrived[team as TeamId], `${team} was exposed, so it develops and stops`).toBeLessThan(0.1);
     }
+  });
+
+  it("holds back exactly the dyes whose own layer caught the light", () => {
+    // The rule, not four hard-coded colours: a stalled dye never reaches the
+    // top, so the channel it would have absorbed survives into the print.
+    // Cyan absorbs red, magenta green, yellow blue.
+    for (const scene of SCENES) {
+      const [r, g, b] = develop(1, scene).photo;
+      const channel: Record<TeamId, number> = { cyan: r, magenta: g, yellow: b };
+      for (const team of TEAMS) {
+        const where = `${scene.id}: ${team}`;
+        if (scene.stuck.includes(team)) {
+          expect(channel[team], `${where} stalled, so its channel should survive`).toBeGreaterThan(200);
+        } else {
+          expect(channel[team], `${where} arrived, so its channel should be absorbed`).toBeLessThan(60);
+        }
+      }
+    }
+  });
+
+  it("keeps white paper white, which is the case that proves it is a rule", () => {
+    // Every layer exposed means every dye has work, so none of them arrive and
+    // nothing is subtracted. If this ever comes out grey or coloured, the
+    // model has stopped being about exposure and started being about hues.
+    const white = SCENES.find((s) => s.id === "white");
+    expect(white).toBeDefined();
+    const [r, g, b] = develop(1, white!).photo;
+    for (const c of [r, g, b]) expect(c).toBeGreaterThan(200);
+    expect(Math.max(r, g, b) - Math.min(r, g, b), "and neutral, not tinted").toBeLessThan(8);
+  });
+
+  it("offers every scene as one keyboard-navigable choice", () => {
+    const radios = doc.querySelectorAll<HTMLInputElement>('[data-testid="scene"]');
+    expect(radios.length, "one control per scene in the shipped HTML").toBe(SCENES.length);
+    const names = new Set([...radios].map((r) => r.getAttribute("name")));
+    expect(names.size, "a shared name is what makes them one group to arrow through").toBe(1);
+    expect([...radios].filter((r) => r.hasAttribute("checked")).length, "exactly one starts selected").toBe(1);
   });
 
   it("reads as red once it clears, because cyan is the dye that got stuck", () => {

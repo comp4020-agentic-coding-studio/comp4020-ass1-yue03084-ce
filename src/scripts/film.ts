@@ -7,14 +7,29 @@ export type TeamId = "cyan" | "magenta" | "yellow";
 export const TEAMS: readonly TeamId[] = ["cyan", "magenta", "yellow"];
 
 export interface Scene {
+  readonly id: string;
+  readonly label: string;
   /** Dyes whose home layer caught light, so they develop it and stop moving. */
   readonly stuck: readonly TeamId[];
 }
 
-/** Photographing something red exposes the red-sensitive layer, whose dye is
- *  cyan — so cyan is the one that never arrives, and magenta plus yellow read
- *  as red at the top. */
-export const RED_APPLE: Scene = { stuck: ["cyan"] };
+/** One rule, four readings of it: light of a colour exposes the layer
+ *  sensitive to that colour, and that layer's dye is the one held back. The
+ *  two ends are what make it a rule rather than a trick — white light exposes
+ *  everything, so nothing arrives and the print stays white; the dark exposes
+ *  nothing, so every dye arrives and the print goes black. */
+export const SCENES: readonly Scene[] = [
+  { id: "red", label: "A red apple", stuck: ["cyan"] },
+  { id: "green", label: "A green leaf", stuck: ["magenta"] },
+  { id: "blue", label: "Blue sky", stuck: ["yellow"] },
+  { id: "white", label: "White paper", stuck: ["cyan", "magenta", "yellow"] },
+];
+
+export const RED_APPLE: Scene = SCENES[0];
+
+export function sceneById(id: string | null | undefined): Scene {
+  return SCENES.find((scene) => scene.id === id) ?? SCENES[0];
+}
 
 // Fractions of the scrub, not seconds. The gap between dyeDone and clearStart
 // is the point of the whole piece: the colour is already in place and the
