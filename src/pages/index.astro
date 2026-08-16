@@ -1,20 +1,142 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+// The film sandwich, top (viewing surface) to bottom, as percentages of the
+// stack's height. Runners climb from their home layer to the receiving layer,
+// so every position here is also an animation target — keep them in sync with
+// the --home/--dest values handed to each runner below.
+const LAYERS = [
+  { id: "receive", span: 14, name: "Receiving layer", note: "the picture forms here" },
+  { id: "reagent", span: 20, name: "Reagent", note: "opaque at first, then white" },
+  { id: "blue", span: 15, name: "Blue-sensitive", note: "yellow dye lives here" },
+  { id: "green", span: 15, name: "Green-sensitive", note: "magenta dye lives here" },
+  { id: "red", span: 15, name: "Red-sensitive", note: "cyan dye lives here" },
+  { id: "base", span: 21, name: "Base", note: "opaque backing" },
+];
+
+// Where each dye team starts: the vertical centre of its home layer.
+const DEST = 7;
+const TEAMS = [
+  { id: "yellow", home: 41.5 },
+  { id: "magenta", home: 56.5 },
+  { id: "cyan", home: 71.5 },
+];
+const PER_TEAM = 7;
 ---
 
-<Layout title="COMP4020 prototype">
+<Layout title="A Polaroid develops backwards">
   <header>
     <nav aria-label="Primary">
       <a href="./">Home</a>
     </nav>
   </header>
+
   <main>
-    <h1>COMP4020 prototype</h1>
-    <p data-testid="intro">
-      Replace this with your prototype. This week's brief is on the course
-      website; <code>spec/README.md</code> explains how the checks in this repo
-      relate to it.
+    <h1>A Polaroid develops backwards</h1>
+
+    <p class="lede">
+      You have watched this happen. A photo slides out grey, and over ten
+      minutes a picture swims up out of it. That is not what you were watching.
+      The picture finished early. What took ten minutes was the
+      <em>background</em> behind it turning from black to white.
     </p>
+
+    <p>
+      Drag the slider. Watch when the colour actually arrives, and when you are
+      first allowed to see it.
+    </p>
+
+    <div class="rig">
+      <figure class="film" data-testid="film">
+        <div class="stack" aria-hidden="true">
+          {
+            LAYERS.map((layer) => (
+              <div class={`layer layer--${layer.id}`} style={`--span:${layer.span}`}>
+                <span class="layer__name">{layer.name}</span>
+                <span class="layer__note">{layer.note}</span>
+              </div>
+            ))
+          }
+
+          <div class="runners">
+            {
+              TEAMS.flatMap((team, t) =>
+                Array.from({ length: PER_TEAM }, (_, i) => (
+                  <span
+                    class={`runner runner--${team.id}`}
+                    data-team={team.id}
+                    style={`--home:${team.home}%; --dest:${DEST}%; --lane:${
+                      /* Lanes start right of the labels, and each team is
+                         nudged sideways so arrivals stack visibly instead of
+                         hiding behind whichever team painted last. */
+                      39 + i * (56 / (PER_TEAM - 1)) + (t - 1) * 2.4
+                    }%; --lag:${i / (PER_TEAM * 2)}`}
+                  />
+                )),
+              )
+            }
+          </div>
+        </div>
+        <figcaption>
+          A cross-section of the film. Light came in from the top.
+        </figcaption>
+      </figure>
+
+      <figure class="viewer">
+        <div class="photo" data-testid="photo"></div>
+        <figcaption>What you see looking at the photo</figcaption>
+      </figure>
+    </div>
+
+    <div class="control">
+      <p class="clock" data-testid="clock" aria-live="polite">0 seconds</p>
+
+      <label class="scrub">
+        <span class="scrub__label">Time since the photo left the camera</span>
+        <input
+          type="range"
+          min="0"
+          max="1000"
+          value="0"
+          step="1"
+          data-testid="time"
+          aria-describedby="scrub-help"
+        />
+      </label>
+      <p id="scrub-help" class="hint">Use the arrow keys for fine control.</p>
+    </div>
+
+    <section class="reading">
+      <h2>What just happened</h2>
+      <p>
+        Each light-sensitive layer keeps its own colour of dye, and each dye
+        molecule is also the chemical that develops that layer. When the rollers
+        burst the reagent pod, every dye starts climbing toward the receiving
+        layer at the top.
+      </p>
+      <p>
+        A dye whose layer <em>was</em> hit by light has work to do. It does it,
+        and in doing it, it gets stuck. A dye whose layer saw no light has
+        nothing to do, so it climbs all the way up and stays there.
+      </p>
+      <p class="punch">
+        So the picture is painted by the dye that had no work to do. Photograph
+        something red, and it is the cyan that gets stuck — leaving magenta and
+        yellow to arrive at the top, where they read as red.
+      </p>
+      <p>
+        Meanwhile the reagent that started the race is opaque, which is why the
+        photo can leave the camera in daylight at all: it carries its own
+        darkroom. An acid layer above it slowly neutralises it, and the black
+        goes white — revealing the white pigment that gives the print its
+        background. The dye was in place long before you could see it.
+      </p>
+      <p class="aside">
+        Shaking it does nothing. There is still liquid in there, and Polaroid
+        asks you not to.
+      </p>
+    </section>
   </main>
+
   <script src="../scripts/main.ts"></script>
 </Layout>
