@@ -31,7 +31,21 @@ I was trying to show.
 
 [`7427934...69e78d8`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/compare/7427934...69e78d8)
 
-### 2. Turning the exploded view into light passing through the film
+### 2. Adding the cake, the subject with the most colour in it
+
+I added one more picture, a slice of cake. This one has more layers of colour in
+it than the others, and it is the closest to how a real Polaroid photo develops.
+
+The obvious thing to do was to leave it as it was, but I felt the pictures I
+already had only highlighted the changes in the three main colours. I wanted a
+picture with more layers in it to show the principle behind how the image forms.
+
+I dragged the slice marker up and down and checked whether the colour of each
+layer matched the result it showed.
+
+[`bd3a74a...795e697`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/compare/bd3a74a...795e697)
+
+### 3. Turning the exploded view into light passing through the film
 
 I developed the original "Tip the stack back" animation into one where light
 passes through the stack, which shows more intuitively how the light travels
@@ -44,7 +58,7 @@ show.
 
 [`9949e59`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/commit/9949e59)
 
-### 3. Putting the rules into CLAUDE.md instead of into another prompt
+### 4. Putting the rules into CLAUDE.md instead of into another prompt
 
 I felt I was saying the same things over and over, and I wanted to write them
 down so I wouldn't have to repeat them later. The obvious thing to do was just
