@@ -14,13 +14,24 @@ const LAYERS = [
   { id: "base", span: 21, name: "Base", note: "opaque backing" },
 ];
 
-// Where each dye team starts: the vertical centre of its home layer.
+// Exploded view: each layer slides along the stack's axis by its distance from
+// the middle, so LAYERS' index is doing double duty as a position. Centring on
+// (length - 1) / 2 keeps the stack's middle where it already is instead of
+// dragging the whole diagram off one end.
+const MID = (LAYERS.length - 1) / 2;
+const offset = (id: string): number => LAYERS.findIndex((l) => l.id === id) - MID;
+
+// Where each dye team starts: the vertical centre of its home layer, and the
+// layer whose plane it sits on once the stack is pulled apart. A runner
+// interpolates both together, so it flies out of its own layer and into the
+// receiving layer rather than sliding along a single flat sheet.
 const DEST = 7;
 const TEAMS = [
-  { id: "yellow", home: 41.5 },
-  { id: "magenta", home: 56.5 },
-  { id: "cyan", home: 71.5 },
+  { id: "yellow", home: 41.5, from: "blue" },
+  { id: "magenta", home: 56.5, from: "green" },
+  { id: "cyan", home: 71.5, from: "red" },
 ];
+const DEST_OFFSET = offset("receive");
 const PER_TEAM = 7;
 ---
 
@@ -51,7 +62,10 @@ const PER_TEAM = 7;
         <div class="stack" aria-hidden="true">
           {
             LAYERS.map((layer) => (
-              <div class={`layer layer--${layer.id}`} style={`--span:${layer.span}`}>
+              <div
+                class={`layer layer--${layer.id}`}
+                style={`--span:${layer.span}; --o:${offset(layer.id)}`}
+              >
                 <span class="layer__name">{layer.name}</span>
                 <span class="layer__note">{layer.note}</span>
               </div>
@@ -65,7 +79,9 @@ const PER_TEAM = 7;
                   <span
                     class={`runner runner--${team.id}`}
                     data-team={team.id}
-                    style={`--home:${team.home}%; --dest:${DEST}%; --lane:${
+                    style={`--home:${team.home}%; --dest:${DEST}%; --home-o:${
+                      offset(team.from)
+                    }; --dest-o:${DEST_OFFSET}; --lane:${
                       /* Lanes start right of the labels, and each team is
                          nudged sideways so arrivals stack visibly instead of
                          hiding behind whichever team painted last. */
@@ -89,7 +105,17 @@ const PER_TEAM = 7;
     </div>
 
     <div class="control">
-      <p class="clock" data-testid="clock" aria-live="polite">0 seconds</p>
+      {/* The phone lays the rig out in a column, which puts the swatch off
+          screen whenever the slider is on it — and the comparison between
+          "the dye has arrived" and "the photo is still black" is the entire
+          point. So the narrow viewport hides the big swatch and shows this
+          one, riding in the bar beside the clock. Same value, one visible
+          copy at any width. */}
+      <div class="readout">
+        <span class="readout__swatch" data-testid="photo-mini" aria-hidden="true"></span>
+        <span class="readout__label">What you'd see</span>
+        <p class="clock" data-testid="clock" aria-live="polite">0 seconds</p>
+      </div>
 
       <label class="scrub">
         <span class="scrub__label">Time since the photo left the camera</span>
@@ -104,6 +130,11 @@ const PER_TEAM = 7;
         />
       </label>
       <p id="scrub-help" class="hint">Use the arrow keys for fine control.</p>
+
+      <label class="toggle">
+        <input type="checkbox" id="explode" data-testid="explode" />
+        <span>Tip the stack back and pull the layers apart</span>
+      </label>
     </div>
 
     <section class="reading">

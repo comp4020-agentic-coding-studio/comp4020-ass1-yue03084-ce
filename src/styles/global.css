@@ -1,11 +1,10 @@
-/* The tilt/spread pair drives the exploded 3-D view. They live here, at the
-   root, because the phone viewport needs smaller values and a media query is
-   the only honest place to say so — an angle tuned on a 1920px desktop
-   overflows 390px badly. Step 1 keeps --tilt at 0 (flat cross-section); the
-   3-D pass raises it. */
+/* The tilt/gap pair drives the exploded 3-D view. They live here, at the root,
+   because the phone viewport needs smaller values and a media query is the
+   only honest place to say so — an angle tuned on a 1920px desktop overflows
+   390px badly. Zero is the flat cross-section; the checkbox raises both. */
 :root {
   --tilt: 0deg;
-  --spread: 0px;
+  --gap: 0rem;
   --stack-h: 30rem;
   --ink: #16161a;
   --dim: #6b6b76;
@@ -13,9 +12,31 @@
   --accent: #0b5fff;
 }
 
+/* Two custom properties are the entire exploded view: set them on the root and
+   they cascade to the layers and the runners alike, so one state change moves
+   every part of the diagram consistently.
+
+   The attribute is mirrored from the checkbox by main.ts. This was
+   html:has(#explode:checked) first — see the note there for the Chrome
+   invalidation bug that cost the CSS-only version its job.
+
+   34deg, not the 55deg an exploded product shot would use: past about 40 the
+   layer labels foreshorten into unreadable slivers, and the labels are what
+   make this a diagram rather than a decoration. */
+html[data-explode="true"] {
+  --tilt: 34deg;
+  --gap: 1.15rem;
+}
+
 @media (width <= 40rem) {
   :root {
     --stack-h: 22rem;
+  }
+
+  /* 390px has no room to spend on perspective. Same idea, smaller dose. */
+  html[data-explode="true"] {
+    --tilt: 26deg;
+    --gap: 0.75rem;
   }
 }
 
@@ -99,10 +120,29 @@ figcaption {
 .film {
   flex: 1 1 auto;
   min-width: 0;
+
+  /* The vanishing point for the exploded view. It sits on .film rather than
+     .stack because a perspective and its transform cannot be the same element
+     — put both on .stack and the layers stay resolutely flat. */
+  perspective: 1400px;
+  transition: margin 220ms ease;
 }
 
 .viewer {
   flex: 0 0 7rem;
+}
+
+/* Wide viewports have the big swatch beside the diagram, so the bar carries
+   the clock alone.
+
+   This has to sit above the narrow-viewport block, not below it. Both rules
+   are one class deep, so source order decides, and with the hide written last
+   the phone lost the small swatch as well as the big one — a probe caught the
+   page rendering no result at all at 390px while computing the right colour
+   for an element it never drew. */
+.readout__swatch,
+.readout__label {
+  display: none;
 }
 
 @media (width <= 34rem) {
@@ -111,13 +151,36 @@ figcaption {
     align-items: stretch;
   }
 
-  /* Left to itself the swatch becomes a full-width square and shoves the
-     slider off the screen, which breaks the one thing a phone visitor has to
-     be able to reach. */
+  /* The big swatch is off screen whenever the slider is in reach here, so the
+     bar carries a small one instead and this one steps aside entirely. */
   .viewer {
+    display: none;
+  }
+
+  .readout {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .readout__swatch {
+    display: block;
     flex: none;
-    width: 6rem;
-    align-self: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 3px;
+    background: var(--photo, #101014);
+    border: 1px solid var(--rule);
+  }
+
+  .readout__label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--dim);
+  }
+
+  .readout .clock {
+    margin: 0 0 0 auto;
   }
 }
 
@@ -126,12 +189,13 @@ figcaption {
 .stack {
   position: relative;
   height: var(--stack-h);
-  border-radius: 4px;
-  overflow: hidden;
-  background: #101014;
+
+  /* No overflow: hidden. Clipping forces a stacking context that flattens
+     preserve-3d, so hiding the corners would cost the whole exploded view;
+     the rounding moves to the two end layers instead. */
   transform: rotateX(var(--tilt));
   transform-style: preserve-3d;
-  transition: transform 120ms linear;
+  transition: transform 220ms ease;
 }
 
 .layer {
@@ -143,6 +207,27 @@ figcaption {
   padding: 0 0.7rem;
   border-bottom: 1px solid rgb(255 255 255 / 12%);
   overflow: hidden;
+
+  /* --o is the layer's signed distance from the middle of the stack, so one
+     multiplication fans all six out symmetrically and collapses them back
+     with no per-layer rule. */
+  transform: translateY(calc(var(--o) * var(--gap)));
+  transition: transform 220ms ease;
+}
+
+.layer:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.layer:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+/* Separated slabs need an edge of their own; touching ones already have the
+   border between them doing that job. */
+html[data-explode="true"] .layer {
+  border-radius: 3px;
+  box-shadow: 0 6px 14px rgb(0 0 0 / 28%);
 }
 
 .layer__name {
@@ -203,6 +288,7 @@ figcaption {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  transform-style: preserve-3d;
 }
 
 .runner {
@@ -214,6 +300,22 @@ figcaption {
   margin: -0.25rem 0 0 -0.25rem;
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+
+  /* Two interpolations on the same --p: `top` walks the dye up the diagram,
+     and this walks it off its own layer's plane and onto the receiving
+     layer's. Pulled apart, a runner visibly leaves one slab and crosses to
+     another instead of sliding along a single sheet — which is the claim the
+     exploded view exists to make.
+
+     The counter-rotation is the last step, so the dot faces the reader while
+     the stack behind it stays tilted. Without it a 34deg dot is an ellipse and
+     reads as a smear. */
+  transform:
+    translateY(
+      calc((var(--home-o) + (var(--dest-o) - var(--home-o)) * var(--p, 0)) * var(--gap))
+    )
+    rotateX(calc(-1 * var(--tilt)));
+  transition: transform 220ms ease;
 }
 
 .runner--cyan {
@@ -254,8 +356,16 @@ figcaption {
   .control {
     position: sticky;
     bottom: 0;
-    padding: 0.6rem 0 0.8rem;
-    background: linear-gradient(to bottom, rgb(251 251 253 / 0%), #fbfbfd 18%);
+
+    /* A fade to the page colour let the diagram show through the bar, which
+       read as a rendering fault rather than as a control that stays put.
+       Opaque, full-bleed to the body padding, and edged with a hairline, it
+       reads as what it is: a bar the stack scrolls behind. */
+    margin-inline: -1.25rem;
+    padding: 0.7rem 1.25rem 0.9rem;
+    background: #fbfbfd;
+    border-top: 1px solid var(--rule);
+    box-shadow: 0 -4px 12px rgb(0 0 0 / 6%);
   }
 }
 
@@ -264,6 +374,21 @@ figcaption {
   font-variant-numeric: tabular-nums;
   color: var(--dim);
   font-size: 0.9rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.toggle input {
+  accent-color: var(--accent);
+  width: 1rem;
+  height: 1rem;
+  flex: none;
 }
 
 .scrub {
@@ -283,9 +408,43 @@ figcaption {
   accent-color: var(--accent);
 }
 
-.scrub input:focus-visible {
+/* One focus ring for both controls, declared once and after both of them.
+   Keeping the two :focus-visible rules separate made stylelint's
+   no-descending-specificity unsatisfiable — whichever went first put an
+   element selector after a heavier one. A single shared ring is what the page
+   wanted anyway: two controls, one way of showing where you are. */
+.scrub input:focus-visible,
+.toggle input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
+}
+
+/* Transforms are invisible to layout, so the fanned-out stack overhangs its own
+   box and lands on whatever is next to it. Measured at 1920: the base slab
+   overran the caption by 16px while the top slab still had 102px of clear air
+   above it — the overhang is asymmetric because the far edge tips away from
+   the reader and the near edge swings toward them.
+
+   So the space is bought asymmetrically too. The caption's is bought on the
+   caption, not on .film: the caption lives inside the figure, so a margin on
+   .film pushes both of them down together and never opens a gap between
+   them. */
+html[data-explode="true"] .film {
+  margin-block: 1rem 0;
+}
+
+html[data-explode="true"] .film figcaption {
+  margin-top: 2.6rem;
+}
+
+@media (width <= 40rem) {
+  html[data-explode="true"] .film {
+    margin-block: 0.75rem 0;
+  }
+
+  html[data-explode="true"] .film figcaption {
+    margin-top: 1.8rem;
+  }
 }
 
 .reading p {
@@ -293,7 +452,10 @@ figcaption {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stack {
+  .stack,
+  .layer,
+  .runner,
+  .film {
     transition: none;
   }
 }

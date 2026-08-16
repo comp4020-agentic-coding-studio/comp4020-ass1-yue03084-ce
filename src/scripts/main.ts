@@ -10,7 +10,12 @@ import {
 } from "./film";
 
 const stack = document.querySelector<HTMLElement>(".stack");
-const photo = document.querySelector<HTMLElement>('[data-testid="photo"]');
+// Two swatches, one visible at a time: the big one beside the diagram on a
+// wide viewport, the small one in the sticky bar on a narrow one. Both read
+// the same frame, so they cannot disagree.
+const photos = document.querySelectorAll<HTMLElement>(
+  '[data-testid="photo"], [data-testid="photo-mini"]',
+);
 const clock = document.querySelector<HTMLElement>('[data-testid="clock"]');
 const scrub = document.querySelector<HTMLInputElement>('[data-testid="time"]');
 const receive = document.querySelector<HTMLElement>(".layer--receive");
@@ -29,7 +34,9 @@ function render(t: number): void {
     runner.dataset.stuck = String(RED_APPLE.stuck.includes(team) && t > TIMELINE.stuckHalt);
   }
 
-  photo?.style.setProperty("--photo", `rgb(${frame.photo.join(" ")})`);
+  for (const el of photos) {
+    el.style.setProperty("--photo", `rgb(${frame.photo.join(" ")})`);
+  }
 
   // The receiving layer shows the dye itself, at full strength, regardless of
   // the backdrop — the colour is there whether or not you can see it yet. It
@@ -46,4 +53,25 @@ if (scrub) {
   const read = (): number => Number(scrub.value) / Number(scrub.max);
   scrub.addEventListener("input", () => render(read()));
   render(read());
+}
+
+// The exploded view was pure CSS — html:has(#explode:checked) — until a probe
+// caught Chrome updating --tilt on the root while leaving the rules that
+// consume it unrecomputed: the stack stayed 480px tall at a 34deg tilt, and
+// the .film margin never appeared. It reproduces when a tab is navigated to
+// the page more than once, which is also what a browser Back button does —
+// and Back restores a checked checkbox, so the page would have come back
+// claiming to be exploded while rendering flat.
+//
+// Mirroring the checkbox onto an attribute sidesteps the invalidation path
+// entirely. It costs nothing: the scrub already needs this script, so there is
+// no no-JS visitor for the CSS-only version to serve. Syncing on load rather
+// than only on change is the half that handles restored state.
+const explode = document.querySelector<HTMLInputElement>('[data-testid="explode"]');
+if (explode) {
+  const sync = (): void => {
+    document.documentElement.dataset.explode = String(explode.checked);
+  };
+  explode.addEventListener("change", sync);
+  sync();
 }

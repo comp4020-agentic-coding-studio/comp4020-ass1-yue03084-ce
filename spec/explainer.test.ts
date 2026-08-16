@@ -31,6 +31,22 @@ describe("the visitor can drive it", () => {
     expect(doc.querySelector('[data-testid="film"]')).toBeTruthy();
     expect(doc.querySelector('[data-testid="photo"]')).toBeTruthy();
   });
+
+  it("ships a swatch for each viewport, since each hides the other's", () => {
+    // A source-order slip once hid both at 390px: the page computed the right
+    // colour and drew it nowhere, so a phone visitor got a diagram and no
+    // result. jsdom applies no media queries, so this can only assert both
+    // exist -- which viewport reveals which is checked in a browser.
+    expect(doc.querySelector('[data-testid="photo"]')).toBeTruthy();
+    expect(doc.querySelector('[data-testid="photo-mini"]')).toBeTruthy();
+  });
+
+  it("lets the layers be pulled apart, by keyboard as much as by mouse", () => {
+    const toggle = doc.querySelector<HTMLInputElement>('[data-testid="explode"]');
+    expect(toggle?.getAttribute("type"), "a native checkbox is focusable and toggles on Space").toBe("checkbox");
+    const name = toggle?.closest("label")?.textContent?.trim() ?? "";
+    expect(name.length, "an unlabelled checkbox says nothing about what it does").toBeGreaterThan(0);
+  });
 });
 
 describe("driving it changes what you see", () => {
