@@ -54,10 +54,4 @@ project. So I thought putting them in the file was better. Later, when I wrote
 prompts — for example when I changed and then removed the sound effects — I
 wasn't repeating them any more.
 
-<!-- 这段可以配一条 prompt 引用，因为这个时刻是你问出来的，不是我提的。想加
-     就把下面这句放进来（它会渲染成引用块）：
-
-     > 在过去的一些prompt里，有没有什么一些共同的约束或者其他东西可以作为
-     > back pressure的 -->
-
 [`bcccf70`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/commit/bcccf70)
