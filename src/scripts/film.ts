@@ -31,41 +31,92 @@ export function sceneById(id: string | null | undefined): Scene {
   return SCENES.find((scene) => scene.id === id) ?? SCENES[0];
 }
 
-// Fractions of the scrub, not seconds. The gap between dyeDone and clearStart
-// is the point of the whole piece: the colour is already in place and the
-// background has not started to clear, so there is nothing to see yet.
-export const TIMELINE = {
-  runStart: 0.06,
-  stuckHalt: 0.18,
-  // Small on purpose: a stuck dye has to halt *inside* its own layer, or the
-  // diagram says it got caught somewhere it never was.
-  stuckReach: 0.055,
-  dyeDone: 0.4,
-  clearStart: 0.42,
-  clearDone: 0.92,
-} as const;
+// --- the clock ------------------------------------------------------------
 
-// APPROXIMATE. The shape (dye first, background much later) is the mechanism;
+// APPROXIMATE. The shape — dye first, background much later — is the mechanism;
 // these seconds are a plausible reading of it, not a sourced measurement.
 // Verify against Polaroid's own figures before treating the numbers as fact.
 export const FULL_SECONDS = 900;
-export const TIME_CURVE = 2.5;
 
-// How much of a channel a fully-arrived dye removes. Real dyes are not perfect
-// filters, and a hard 1.0 renders as electric primaries that no Polaroid has
-// ever produced.
-const DENSITY = 0.88;
+// Track position is the square root of time, so time is position squared. Half
+// the travel buys the first 225 seconds, which is where every dye curve below
+// does its moving; the back half of the track is the slow background clear,
+// where a whole minute looks like almost nothing. The clock keeps reporting
+// true elapsed time, so the curve costs the reader no accuracy — only the
+// evenness of the scale, which was buying them nothing.
+export const TIME_CURVE = 2;
+
+/** Seconds at which each dye is half-way home. Yellow's layer sits nearest the
+ *  receiving layer and cyan's is furthest down the sandwich, so they arrive in
+ *  that order — the order is geometry, not chemistry. */
+export const DYE_HALF_SECONDS: Record<TeamId, number> = {
+  yellow: 60,
+  magenta: 100,
+  cyan: 150,
+};
+
+/** And the reagent takes four minutes to get half-way from opaque to white —
+ *  slower than every dye put together. That ratio is the entire piece. */
+export const BG_HALF_SECONDS = 240;
+
+/** A fresh print is not black. The opacifier is a very dark desaturated
+ *  blue-green, which is why a Polaroid pulled in daylight reads as dark grey
+ *  rather than as a hole in the page. */
+export const OPACIFIER: readonly [number, number, number] = [18, 26, 24];
+
+/** How far a dye gets before its own layer's development work stops it. Small
+ *  on purpose: a stuck dye has to halt *inside* its own layer, or the diagram
+ *  says it got caught somewhere it never was. */
+export const STUCK_REACH = 0.055;
+
+/** How much of a channel a fully-arrived dye removes. Real dyes are not perfect
+ *  filters, and a hard 1.0 renders as electric primaries that no Polaroid has
+ *  ever produced. */
+export const DENSITY = 0.88;
 
 export const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
-/** Progress through a window: 0 before it, 1 after it. */
-export function ramp(t: number, from: number, to: number): number {
-  return clamp01((t - from) / (to - from));
+/** A logistic curve, rescaled to leave 0 at exactly zero seconds and approach
+ *  1 from there. Rescaling matters: a raw logistic is already 1% developed
+ *  before the pod has burst, and a print that is 1% developed in the camera is
+ *  a lie the reader can see, because the dot in the diagram starts off its own
+ *  layer. 4.6 is ln(99), so that is the 1% being moved. */
+export function sigmoid01(seconds: number, halfSeconds: number): number {
+  const k = 4.6 / halfSeconds;
+  const raw = 1 / (1 + Math.exp(-k * (seconds - halfSeconds)));
+  const floor = 1 / (1 + Math.exp(k * halfSeconds));
+  return clamp01((raw - floor) / (1 - floor));
 }
 
+/** How much of one dye has reached the receiving layer, if nothing stopped it. */
+export function dyeArrival(seconds: number, team: TeamId): number {
+  return sigmoid01(seconds, DYE_HALF_SECONDS[team]);
+}
+
+/** How far the opaque reagent has turned white. */
+export function clearAt(seconds: number): number {
+  return sigmoid01(seconds, BG_HALF_SECONDS);
+}
+
+/** The backdrop the dyes are seen against, opacifier to white. */
+export function backgroundAt(seconds: number): readonly [number, number, number] {
+  const c = clearAt(seconds);
+  return [
+    OPACIFIER[0] + (255 - OPACIFIER[0]) * c,
+    OPACIFIER[1] + (255 - OPACIFIER[1]) * c,
+    OPACIFIER[2] + (255 - OPACIFIER[2]) * c,
+  ];
+}
+
+// --- one frame of the idealised scene -------------------------------------
+
 export interface Frame {
+  /** True elapsed seconds since the print left the camera. */
+  readonly seconds: number;
   /** 0–1 per dye: how much of it has reached the receiving layer. */
   readonly arrived: Record<TeamId, number>;
+  /** Per dye: it was exposed, and it has finished the short run it gets. */
+  readonly halted: Record<TeamId, boolean>;
   /** 0–1: how far the opaque reagent has turned white. */
   readonly clear: number;
   /** What the dye mix alone looks like, ignoring the backdrop. */
@@ -74,14 +125,24 @@ export interface Frame {
   readonly photo: readonly [number, number, number];
 }
 
+/** The whole print as one colour: the flat statement of the rule that the four
+ *  scene labels name. The canvas renders the same physics per pixel from the
+ *  same exported curves, so the two cannot drift apart — this one stays
+ *  because a single colour is what the sticky bar has room for, and because
+ *  the rule is easier to assert about than a photograph. */
 export function develop(t: number, scene: Scene): Frame {
-  const clear = ramp(t, TIMELINE.clearStart, TIMELINE.clearDone);
+  const seconds = elapsedSeconds(t);
 
   const arrived = {} as Record<TeamId, number>;
+  const halted = {} as Record<TeamId, boolean>;
   for (const team of TEAMS) {
-    arrived[team] = scene.stuck.includes(team)
-      ? ramp(t, TIMELINE.runStart, TIMELINE.stuckHalt) * TIMELINE.stuckReach
-      : ramp(t, TIMELINE.runStart, TIMELINE.dyeDone);
+    const run = dyeArrival(seconds, team);
+    const stuck = scene.stuck.includes(team);
+    // A stuck dye moves at the speed it would have moved at; it just runs out
+    // of road, because the work it does is what pins it. So it follows its own
+    // curve, scaled down to the width of its own layer.
+    arrived[team] = stuck ? run * STUCK_REACH : run;
+    halted[team] = stuck && run > 0.85;
   }
 
   // Subtractive: cyan takes red, magenta takes green, yellow takes blue. A dye
@@ -94,17 +155,30 @@ export function develop(t: number, scene: Scene): Frame {
   ] as const;
 
   const to255 = (c: number): number => Math.round(c * 255);
+  const bg = backgroundAt(seconds);
   return {
+    seconds,
     arrived,
-    clear,
+    halted,
+    clear: clearAt(seconds),
     dye: [to255(channels[0]), to255(channels[1]), to255(channels[2])],
-    // The backdrop is what changes late: black reagent going white.
-    photo: [to255(clear * channels[0]), to255(clear * channels[1]), to255(clear * channels[2])],
+    // The backdrop is what changes late: dark reagent going white.
+    photo: [
+      Math.round(bg[0] * channels[0]),
+      Math.round(bg[1] * channels[1]),
+      Math.round(bg[2] * channels[2]),
+    ],
   };
 }
 
 export function elapsedSeconds(t: number): number {
-  return FULL_SECONDS * t ** TIME_CURVE;
+  return FULL_SECONDS * clamp01(t) ** TIME_CURVE;
+}
+
+/** The inverse. Autoplay advances real seconds and has to put the track handle
+ *  back where those seconds live. */
+export function scrubFor(seconds: number): number {
+  return clamp01(seconds / FULL_SECONDS) ** (1 / TIME_CURVE);
 }
 
 export function formatClock(seconds: number): string {

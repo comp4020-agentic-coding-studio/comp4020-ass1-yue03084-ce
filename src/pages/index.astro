@@ -1,4 +1,5 @@
 ---
+import Camera from "../components/Camera.astro";
 import Layout from "../layouts/Layout.astro";
 import { SCENES } from "../scripts/film";
 
@@ -33,10 +34,32 @@ const TEAMS = [
   { id: "cyan", home: 71.5, from: "red" },
 ];
 const DEST_OFFSET = offset("receive");
-const PER_TEAM = 7;
+
+// One dot per sample position down the column the slice marker is sitting on,
+// so a lane in this diagram is a *place in the photograph* rather than a
+// decorative repeat. Twelve is the most the 58% of width the lanes get can hold
+// at three teams deep before the dots start hiding each other.
+const PER_TEAM = 12;
+
+// The dye progress bars under the print. Yellow, magenta and cyan here are not
+// theme colours and never take the brand palette: they name which dye the bar
+// is about, and a reader matching a bar to a dot in the diagram is matching on
+// exactly that.
+const BARS = [
+  { id: "yellow", label: "Yellow dye" },
+  { id: "magenta", label: "Magenta dye" },
+  { id: "cyan", label: "Cyan dye" },
+  { id: "clear", label: "Background clearing" },
+];
 ---
 
 <Layout title="A Polaroid develops backwards">
+  {/* The five stripes are the one piece of Polaroid the reader recognises
+      before they have read a word, so the page gets to borrow the recognition
+      once, at full width, and then spend the rest of its colour budget on the
+      diagram. Fixed rather than in flow: it is a letterhead, not a section. */}
+  <div class="spectrum" aria-hidden="true"></div>
+
   <header>
     <nav aria-label="Primary">
       <a href="./">Home</a>
@@ -50,7 +73,7 @@ const PER_TEAM = 7;
       You have watched this happen. A photo slides out grey, and over ten
       minutes a picture swims up out of it. That is not what you were watching.
       The picture finished early. What took ten minutes was the
-      <em>background</em> behind it turning from black to white.
+      <em>background</em> behind it turning from near-black to white.
     </p>
 
     <p>
@@ -82,7 +105,69 @@ const PER_TEAM = 7;
       }
     </fieldset>
 
+    {/* The viewer comes first now, and it did not used to. When the right-hand
+        column was a coloured square the diagram was the subject and the square
+        was its result, so the diagram led. It is a camera now: you point it,
+        press it, and a print comes out — and only then is there anything for a
+        cross-section to be a cross-section *of*. The film's caption says "down
+        the column the marker is on", and the marker lives in here, so meeting
+        the marker second made that caption a forward reference. */}
     <div class="rig">
+      {/* The frame is decoration with a job: a coloured square is a swatch,
+          and the same square inside a Polaroid's white border is a photograph.
+          The reader is being asked to believe the dark rectangle really is
+          what they would be holding, and the frame is what makes that reading
+          automatic instead of something the caption has to argue for. */}
+      <figure class="viewer">
+        <Camera />
+
+        <div class="print" data-testid="print">
+          <div class="polaroid">
+            <div class="plate">
+              <canvas
+                class="photo"
+                data-testid="photo"
+                role="img"
+                aria-label="The print, straight out of the camera: an almost black rectangle."
+              ></canvas>
+
+              {/* A line drawn into the canvas would be a line nobody can
+                  reach. This is the same line as a DOM element sitting exactly
+                  over the canvas, which costs one absolutely positioned div
+                  and buys a tab stop, arrow keys and a focus ring. */}
+              <div
+                class="slice"
+                data-testid="slice"
+                tabindex="0"
+                role="slider"
+                aria-label="Which column of the photo the cross-section shows"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="50"
+                aria-valuetext="the middle of the photo"
+                style="--x:50"
+              >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <figcaption>What you see looking at the photo</figcaption>
+
+        <ul class="bars" data-testid="bars">
+          {
+            BARS.map((bar) => (
+              <li class="bars__row">
+                <span class="bars__key">{bar.label}</span>
+                <span class="bars__track">
+                  <span class={`bars__fill bars__fill--${bar.id}`} data-bar={bar.id} />
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </figure>
+
       <figure class="film" data-testid="film">
         <div class="stack" aria-hidden="true">
           {
@@ -109,9 +194,17 @@ const PER_TEAM = 7;
                     }; --dest-o:${DEST_OFFSET}; --lane:${
                       /* Lanes start right of the labels, and each team is
                          nudged sideways so arrivals stack visibly instead of
-                         hiding behind whichever team painted last. */
-                      39 + i * (56 / (PER_TEAM - 1)) + (t - 1) * 2.4
+                         hiding behind whichever team painted last. The nudge
+                         is a fraction of the lane pitch rather than a fixed
+                         number, because the pitch moves when PER_TEAM does: a
+                         flat 1.4% was measured overlapping the dots by half
+                         their width at twelve samples, and anything past half
+                         the pitch would put a team's dot nearer its
+                         neighbour's lane than its own. 0.45 clears an 8px dot
+                         at both marking widths and still reads as a column. */
+                      39 + (i + (t - 1) * 0.45) * (56 / (PER_TEAM - 1))
                     }%; --lag:${i / (PER_TEAM * 2)}`}
+                    data-i={i}
                   />
                 )),
               )
@@ -119,20 +212,9 @@ const PER_TEAM = 7;
           </div>
         </div>
         <figcaption>
-          A cross-section of the film. Light came in from the top.
+          A cross-section of the film, down the column the marker is on. Left
+          to right here is top to bottom of that column.
         </figcaption>
-      </figure>
-
-      {/* The frame is decoration with a job: a coloured square is a swatch,
-          and the same square inside a Polaroid's white border is a photograph.
-          The reader is being asked to believe the black rectangle really is
-          what they would be holding, and the frame is what makes that reading
-          automatic instead of something the caption has to argue for. */}
-      <figure class="viewer">
-        <div class="polaroid">
-          <div class="photo" data-testid="photo"></div>
-        </div>
-        <figcaption>What you see looking at the photo</figcaption>
       </figure>
     </div>
 
@@ -176,6 +258,29 @@ const PER_TEAM = 7;
         <input type="checkbox" id="explode" data-testid="explode" />
         <span>Tip the stack back and pull the layers apart</span>
       </label>
+
+      {/* Pause only exists while there is something to pause. A dead control
+          sitting there through the whole visit would be four more pixels of a
+          bar this page has already fought to keep short.
+
+          The status line is a live region and the callout over the camera is
+          not, deliberately: the callout is timed to an animation, and an
+          announcement timed to an animation is an announcement that arrives
+          while the reader is still being told something else. */}
+      <div class="playbar">
+        <button type="button" class="playbar__btn" data-testid="pause" hidden>
+          Pause
+        </button>
+        <button
+          type="button"
+          class="playbar__btn"
+          data-testid="sound"
+          aria-pressed="false"
+        >
+          Sound off
+        </button>
+        <p class="playbar__status" data-testid="status" role="status"></p>
+      </div>
     </div>
 
     <section class="reading">
@@ -205,8 +310,8 @@ const PER_TEAM = 7;
       <p>
         Meanwhile the reagent that started the race is opaque, which is why the
         photo can leave the camera in daylight at all: it carries its own
-        darkroom. An acid layer above it slowly neutralises it, and the black
-        goes white — revealing the white pigment that gives the print its
+        darkroom. An acid layer above it slowly neutralises it, and the dark
+        grey-green goes white — revealing the white pigment that gives the print its
         background. The dye was in place long before you could see it.
       </p>
       <p class="aside">

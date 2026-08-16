@@ -1,0 +1,75 @@
+---
+// A OneStep-shaped instant camera, flat and diagrammatic to match the rest of
+// the page — the film cross-section next to it is a schematic, and a rendered
+// camera beside a schematic would read as an advert dropped into a diagram.
+//
+// The shutter is deliberately NOT drawn in here. It is a real <button> laid
+// over the artwork by CSS, because a <circle> cannot be tabbed to, cannot be
+// pressed with Space, and has no focus ring. The SVG is decoration; the one
+// part of the camera that does something is a control.
+
+// The five spectrum stripes, top to bottom, as the logo orders them.
+const SPECTRUM = ["#1f8ac9", "#7cb942", "#f0b32e", "#ee8a2e", "#d94430"];
+const STRIPE_H = 8;
+---
+
+<div class="cam" data-testid="camera">
+  <svg
+    class="cam__art"
+    viewBox="0 0 300 200"
+    role="img"
+    aria-label="An instant camera, drawn flat: a lens, a flash bar, a rainbow stripe, and a slot along the bottom where the print comes out."
+  >
+    <rect class="cam__shell" x="16" y="8" width="268" height="184" rx="16" />
+
+    {/* The upper deck reads as the separate moulding it is on the real body,
+        and gives the flash and viewfinder somewhere to sit. */}
+    <path
+      class="cam__deck"
+      d="M16 24a16 16 0 0 1 16-16h236a16 16 0 0 1 16 16v32H16z"
+    />
+
+    <rect class="cam__finder" x="40" y="22" width="32" height="20" rx="4" />
+    <rect class="cam__flashbar" x="180" y="22" width="84" height="20" rx="4" />
+    {
+      Array.from({ length: 6 }, (_, i) => (
+        <line class="cam__flashline" x1={188 + i * 13} y1="26" x2={188 + i * 13} y2="38" />
+      ))
+    }
+
+    {
+      SPECTRUM.map((hex, i) => (
+        <rect x="40" y={124 + i * STRIPE_H} width="72" height={STRIPE_H} fill={hex} />
+      ))
+    }
+
+    <circle class="cam__barrel" cx="180" cy="108" r="44" />
+    <circle class="cam__ring" cx="180" cy="108" r="34" />
+    <circle class="cam__glass" cx="180" cy="108" r="24" />
+    <ellipse class="cam__glint" cx="168" cy="96" rx="9" ry="6" transform="rotate(-30 168 96)" />
+
+    {/* The rollers are the whole reason the page has a camera in it: the print
+        is not developing until it has been through them. Drawn as the two
+        pinch lines you can actually see looking into a film slot. */}
+    {/* Wide, not the narrow letterbox a first pass drew. The slot has to be at
+        least as wide as the card that comes out of it, and the card is sized by
+        the column it lands in — a slot narrower than its own print reads as a
+        rendering mistake, which is the one thing a diagram cannot afford. */}
+    <rect class="cam__slot" x="36" y="172" width="228" height="14" rx="6" />
+    <rect class="cam__roller" x="40" y="173" width="220" height="4" rx="2" />
+    <rect class="cam__roller" x="40" y="181" width="220" height="4" rx="2" />
+  </svg>
+
+  <button type="button" class="cam__shutter" data-testid="shutter" aria-label="Take the photo">
+  </button>
+
+  <span class="cam__flash" aria-hidden="true"></span>
+
+  {/* Fired by the ejection animation, not by a timer, so the words and the
+      moment they describe cannot drift apart. Hidden from assistive tech: the
+      status line under the controls says the same thing without needing to be
+      timed to an animation. */}
+  <span class="cam__callout" aria-hidden="true">
+    the rollers squeeze the pod — development starts <strong>now</strong>
+  </span>
+</div>

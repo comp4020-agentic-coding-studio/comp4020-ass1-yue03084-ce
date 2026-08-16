@@ -2,7 +2,17 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
-import { develop, RED_APPLE, SCENES, TEAMS, TIMELINE, type TeamId } from "../src/scripts/film";
+import {
+  develop,
+  DYE_HALF_SECONDS,
+  dyeArrival,
+  elapsedSeconds,
+  RED_APPLE,
+  SCENES,
+  scrubFor,
+  TEAMS,
+  type TeamId,
+} from "../src/scripts/film";
 
 // The week's spec, turned into assertions. Two of its lines are mechanically
 // checkable: the visitor must be able to do something that changes what they
@@ -83,11 +93,43 @@ describe("what the page claims about the film", () => {
   it("finishes the picture before it lets you see it", () => {
     // The whole thesis. If a refactor makes the photo readable at the moment
     // the dye lands, this page is telling people something false.
-    const atDyeDone = develop(TIMELINE.dyeDone, RED_APPLE);
+    //
+    // The dye curves are sigmoids now, not ramps with an end, so there is no
+    // single "done" instant to sample — the test has to go and find the first
+    // moment the free dyes are home and ask what the print looks like there.
+    // That is a better question than the old one anyway: it is the reader's
+    // question, asked at the reader's moment.
     const free = TEAMS.filter((team) => !RED_APPLE.stuck.includes(team));
-    const landed = free.map((team) => atDyeDone.arrived[team]);
-    expect(Math.min(...landed), "the free dyes should be up top by now").toBeCloseTo(1, 5);
-    expect(Math.max(...atDyeDone.photo), "and yet the photo must still be dark").toBeLessThan(12);
+    const timeline = Array.from({ length: 400 }, (_, i) => develop(i / 399, RED_APPLE));
+    const landed = timeline.find((f) => free.every((team) => f.arrived[team] >= 0.95));
+
+    expect(landed, "the free dyes should be home long before the end").toBeDefined();
+    expect(landed!.clear, "and the background has barely started").toBeLessThan(0.25);
+    expect(Math.max(...landed!.photo), "so the print is still dark").toBeLessThan(70);
+    expect(
+      Math.max(...develop(1, RED_APPLE).photo),
+      "while the same print, later, is bright — nothing moved but the backdrop",
+    ).toBeGreaterThan(200);
+  });
+
+  it("brings the dyes home in the order the sandwich puts them in", () => {
+    // Yellow's layer is nearest the top and cyan's is furthest down, so a
+    // frame in the middle of the run should always be layered that way. If
+    // this inverts, the diagram and the photo are telling opposite stories.
+    const at = elapsedSeconds(scrubFor(DYE_HALF_SECONDS.magenta));
+    expect(dyeArrival(at, "yellow")).toBeGreaterThan(dyeArrival(at, "magenta"));
+    expect(dyeArrival(at, "magenta")).toBeGreaterThan(dyeArrival(at, "cyan"));
+  });
+
+  it("gives the fast half of the story half the track", () => {
+    // The dye action is over in four minutes of a fifteen-minute clock. On a
+    // linear track that is the first quarter of the travel and the rest is a
+    // slow fade, so the curve is not a flourish -- it is what makes the part
+    // worth watching draggable at all.
+    expect(elapsedSeconds(0.5), "half the travel should buy about four minutes").toBeGreaterThan(180);
+    expect(elapsedSeconds(0.5)).toBeLessThan(280);
+    expect(elapsedSeconds(1), "and the far end is still the full clock").toBe(900);
+    expect(scrubFor(elapsedSeconds(0.37)), "the mapping has to invert for autoplay").toBeCloseTo(0.37, 6);
   });
 
   it("never lets a stuck dye reach the top", () => {
