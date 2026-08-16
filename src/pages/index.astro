@@ -123,8 +123,15 @@ const PER_TEAM = 7;
         </figcaption>
       </figure>
 
+      {/* The frame is decoration with a job: a coloured square is a swatch,
+          and the same square inside a Polaroid's white border is a photograph.
+          The reader is being asked to believe the black rectangle really is
+          what they would be holding, and the frame is what makes that reading
+          automatic instead of something the caption has to argue for. */}
       <figure class="viewer">
-        <div class="photo" data-testid="photo"></div>
+        <div class="polaroid">
+          <div class="photo" data-testid="photo"></div>
+        </div>
         <figcaption>What you see looking at the photo</figcaption>
       </figure>
     </div>
