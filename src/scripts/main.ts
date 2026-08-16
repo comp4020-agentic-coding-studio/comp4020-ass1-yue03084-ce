@@ -54,7 +54,15 @@ function render(t: number): void {
   receive?.style.setProperty("background", `rgb(${frame.dye.join(" ")} / ${(load * 82).toFixed(1)}%)`);
 
   stack?.style.setProperty("--clear", frame.clear.toFixed(4));
-  if (clock) clock.textContent = formatClock(elapsedSeconds(t));
+
+  // The slider's own value is a step count -- "42" tells a screen reader
+  // nothing. aria-valuetext replaces it with the thing the step means, so the
+  // native announcement on every arrow press is already the useful one. That
+  // is also why the clock is not a live region: it would announce the same
+  // string a second time, once per press, on top of the slider's own.
+  const reading = formatClock(elapsedSeconds(t));
+  if (clock) clock.textContent = reading;
+  scrub?.setAttribute("aria-valuetext", reading);
 }
 
 const readScrub = (): number =>

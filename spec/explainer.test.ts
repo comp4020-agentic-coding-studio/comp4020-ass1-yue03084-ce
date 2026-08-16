@@ -27,6 +27,20 @@ describe("the visitor can drive it", () => {
     expect(labelled.length, "a range with no accessible name is unusable by keyboard alone").toBeGreaterThan(0);
   });
 
+  it("can be crossed by keyboard without a hundred presses", () => {
+    // Named, not lint-caught: the range shipped at max=1000 step=1, which
+    // drags perfectly and takes 60 arrow presses before anything on the page
+    // moves. A control a keyboard user gives up on is not an accessible
+    // control, so the step count is part of the contract.
+    const control = doc.querySelector<HTMLInputElement>('input[type="range"]');
+    const min = Number(control?.getAttribute("min") ?? 0);
+    const max = Number(control?.getAttribute("max") ?? 100);
+    const step = Number(control?.getAttribute("step") ?? 1);
+    const presses = (max - min) / step;
+    expect(presses, "one arrow press should be a visible move, not a rounding error").toBeLessThanOrEqual(100);
+    expect(presses, "and still fine enough to drag smoothly").toBeGreaterThanOrEqual(40);
+  });
+
   it("keeps the diagram and the result in the shipped page", () => {
     expect(doc.querySelector('[data-testid="film"]')).toBeTruthy();
     expect(doc.querySelector('[data-testid="photo"]')).toBeTruthy();

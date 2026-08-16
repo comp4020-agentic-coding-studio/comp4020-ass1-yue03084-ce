@@ -139,22 +139,31 @@ const PER_TEAM = 7;
       <div class="readout">
         <span class="readout__swatch" data-testid="photo-mini" aria-hidden="true"></span>
         <span class="readout__label">What you'd see</span>
-        <p class="clock" data-testid="clock" aria-live="polite">0 seconds</p>
+        <p class="clock" data-testid="clock">0 seconds</p>
       </div>
 
+      {/* 100 steps, not 1000. At max=1000 the slider dragged beautifully and
+          was unusable by keyboard: one arrow press moved it 0.1%, so it took
+          60 presses before anything on the page moved at all and hundreds to
+          reach the part worth watching. 100 keeps the drag continuous — 3-4px
+          a step across the track — while an arrow press is a visible move and
+          Page Up/Down, which a native range gives for 10% free, crosses the
+          whole thing in ten. */}
       <label class="scrub">
         <span class="scrub__label">Time since the photo left the camera</span>
         <input
           type="range"
           min="0"
-          max="1000"
+          max="100"
           value="0"
           step="1"
           data-testid="time"
           aria-describedby="scrub-help"
         />
       </label>
-      <p id="scrub-help" class="hint">Use the arrow keys for fine control.</p>
+      <p id="scrub-help" class="hint">
+        Arrow keys step through it; Page Up and Page Down jump.
+      </p>
 
       <label class="toggle">
         <input type="checkbox" id="explode" data-testid="explode" />
