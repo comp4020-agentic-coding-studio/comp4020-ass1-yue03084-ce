@@ -1,14 +1,17 @@
 # Assignment 1
 
-<!-- 150–300 words, your words. Two prompts, below. This file is graded as your
-     own first-person account, so it has to be written by you — a rushed one
-     you wrote is worth more than a polished one you didn't. -->
-
 ## What was the breakthrough that moved the work forward?
 
-<!-- Not necessarily the biggest feature. The moment after which the work went
-     differently. -->
+The breakthrough was that I wasn't satisfied with the first homepage that was
+generated. I then discussed carefully with the agent what I wanted and confirmed
+it was feasible: for example a model of a Polaroid camera, simulating the print
+being ejected after the shutter is pressed, and more realistic pictures such as
+an apple or a leaf rather than plain colour blocks.
 
 ## What did this work change about who I want to be as a software developer?
 
-<!-- What you'd carry into the next piece of work, or do differently. -->
+This week was the first time I extracted the requirements I had repeated several
+times in my prompts and put them into CLAUDE.md. But before I did that I had
+already repeated them several times. Next time I will write these constraints
+into the file at the point where the site has roughly taken shape and I am
+making lots of small changes to it.
