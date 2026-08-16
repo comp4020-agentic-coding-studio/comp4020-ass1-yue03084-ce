@@ -68,4 +68,18 @@ project. So I thought putting them in the file was better. Later, when I wrote
 prompts — for example when I changed and then removed the sound effects — I
 wasn't repeating them any more.
 
+Before:
+
+> Read the existing code first and work within its structure and style. These
+> are INCREMENTAL improvements — do not restructure the page, do not rewrite
+> the existing copy, and do not break any existing interaction.
+
+After:
+
+> Remove the camera sound effects entirely: delete the shutter click and motor
+> whir audio code (the Web Audio API synthesis), the mute/unmute toggle, and
+> any related state or settings. The shutter press and ejection animation stay
+> exactly as they are, just silent.
+
 [`bcccf70`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/commit/bcccf70)
+— [`474146f...09143c9`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-yue03084-ce/compare/474146f...09143c9)
