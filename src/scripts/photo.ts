@@ -94,18 +94,30 @@ export function attachPhoto(canvas: HTMLCanvasElement): PhotoCanvas | null {
   }
 
   function averageAt(seconds: number): Rgb {
-    const devC = dyeArrival(seconds, "cyan") * DENSITY;
-    const devM = dyeArrival(seconds, "magenta") * DENSITY;
-    const devY = dyeArrival(seconds, "yellow") * DENSITY;
-    const [bgR, bgG, bgB] = backgroundAt(seconds);
-    return [
-      bgR * (1 - (1 - mean[0] / 255) * devC),
-      bgG * (1 - (1 - mean[1] / 255) * devM),
-      bgB * (1 - (1 - mean[2] / 255) * devY),
-    ];
+    return developedRgb(mean, seconds);
   }
 
   return { setSubject, render, column, averageAt };
+}
+
+/** One colour of the scene, as the print shows it at `seconds`.
+ *
+ *  This is the loop in `render` written out for a single pixel. The loop keeps
+ *  its own copy because hoisting three scalars out of 90,000 iterations is the
+ *  reason a full recompute per frame is affordable — but everything that needs
+ *  the answer for one colour rather than all of them calls this, so the strip
+ *  above the cross-section, the chip in the sticky bar and the print itself
+ *  cannot quietly drift into telling different stories. */
+export function developedRgb(source: Rgb, seconds: number): Rgb {
+  const devC = dyeArrival(seconds, "cyan") * DENSITY;
+  const devM = dyeArrival(seconds, "magenta") * DENSITY;
+  const devY = dyeArrival(seconds, "yellow") * DENSITY;
+  const [bgR, bgG, bgB] = backgroundAt(seconds);
+  return [
+    bgR * (1 - (1 - source[0] / 255) * devC),
+    bgG * (1 - (1 - source[1] / 255) * devM),
+    bgB * (1 - (1 - source[2] / 255) * devY),
+  ];
 }
 
 function meanOf(image: ImageData): Rgb {

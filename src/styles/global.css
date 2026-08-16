@@ -253,6 +253,58 @@ figcaption {
 
 /* --- the film stack ----------------------------------------------------- */
 
+/* The strip is positioned off the same two numbers the lanes are, handed down
+   from the markup: the band starts half a lane-pitch left of the first dot and
+   ends half a pitch right of the last, so twelve equal cells put one centre on
+   each lane. Getting this from a flex row of twelve would have been easier and
+   would have been wrong — equal cells across the lane *span* are each offset by
+   half a cell from the dots they sit over. */
+.colstrip {
+  position: relative;
+  height: 1.05rem;
+  margin-bottom: 0.45rem;
+}
+
+.colstrip__key {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--dim);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+/* The arrow does the work the caption otherwise has to: it points into the
+   band, so "top" naming the left end tells you the right end is the bottom
+   without a second label. */
+.colstrip__key::after {
+  content: " \2192";
+}
+
+.colstrip__band {
+  position: absolute;
+  left: var(--left);
+  width: var(--width);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  border-radius: 3px;
+  overflow: hidden;
+
+  /* Inset, not a border: the cells run edge to edge, and an outset ring would
+     put a light line between the strip and the dark end of a fresh print. */
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 22%);
+}
+
+.colstrip__cell {
+  flex: 1 1 0;
+
+  /* Empty gelatine until the first frame lands, so the strip is never a row of
+     transparent gaps in a screenshot taken before the script runs. */
+  background: var(--c, #e9e7ef);
+}
+
 .stack {
   position: relative;
   height: var(--stack-h);
@@ -380,12 +432,28 @@ html[data-explode="true"] .layer {
 
      The counter-rotation is the last step, so the dot faces the reader while
      the stack behind it stays tilted. Without it a 34deg dot is an ellipse and
-     reads as a smear. */
+     reads as a smear.
+
+     And then the nudge toward the reader, which is not cosmetic. Facing the
+     reader while its slab stays tilted means the two planes *intersect*, and
+     Chrome renders intersecting 3-D planes by splitting them along the seam:
+     every dot came out a clean half circle in the exploded view, cut
+     horizontally through the middle. An 8px dot tilted 34deg spans about
+     4.5px of depth, so half of it sits behind the slab; 6px clears that at
+     both the desktop angle and the phone's 26deg. Measured, not guessed — the
+     same fix injected at runtime turned the half circles back into circles
+     before a line of this file changed.
+
+     It is not free: moving toward a 1400px perspective magnifies, so the outer
+     lanes drift 0.74px away from the swatches keyed to them in .colstrip. That
+     is a tenth of a dot and a twenty-fifth of the lane pitch, which is the
+     trade — a whole dot slightly off centre beats half a dot exactly on it. */
   transform:
     translateY(
       calc((var(--home-o) + (var(--dest-o) - var(--home-o)) * var(--p, 0)) * var(--gap))
     )
-    rotateX(calc(-1 * var(--tilt)));
+    rotateX(calc(-1 * var(--tilt)))
+    translateZ(6px);
   transition: transform 220ms ease;
 }
 
@@ -1200,6 +1268,14 @@ html[data-explode="true"] .film figcaption {
   margin-top: 2.6rem;
 }
 
+/* The mirror of the caption's margin. Pulling the stack apart lifts the top
+   layer clear of .stack's own box — the height is fixed, so the layers overflow
+   it — and the strip is the one thing sitting in that overflow. Same distance
+   the caption gives the bottom layer. */
+html[data-explode="true"] .colstrip {
+  margin-bottom: 2.6rem;
+}
+
 @media (width <= 40rem) {
   html[data-explode="true"] .film {
     margin-block: 0.75rem 0;
@@ -1207,6 +1283,10 @@ html[data-explode="true"] .film figcaption {
 
   html[data-explode="true"] .film figcaption {
     margin-top: 1.8rem;
+  }
+
+  html[data-explode="true"] .colstrip {
+    margin-bottom: 1.8rem;
   }
 }
 

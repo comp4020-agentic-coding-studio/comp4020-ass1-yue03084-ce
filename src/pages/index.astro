@@ -41,6 +41,14 @@ const DEST_OFFSET = offset("receive");
 // at three teams deep before the dots start hiding each other.
 const PER_TEAM = 12;
 
+// Where the dot lanes live, across the stack's width: the layer labels own the
+// left, the lanes share out the rest. Named rather than typed twice, because
+// the colour strip above the stack has to span exactly the same range — a
+// swatch has to sit over the lane it describes or it is decoration.
+const LANE_START = 39;
+const LANE_SPAN = 56;
+const LANE_PITCH = LANE_SPAN / (PER_TEAM - 1);
+
 // The dye progress bars under the print. Yellow, magenta and cyan here are not
 // theme colours and never take the brand palette: they name which dye the bar
 // is about, and a reader matching a bar to a dot in the diagram is matching on
@@ -169,6 +177,37 @@ const BARS = [
       </figure>
 
       <figure class="film" data-testid="film">
+        {/* The caption underneath says left-to-right here is top-to-bottom of
+            the marked column, and a reader should not have to take that on
+            trust. This is that column, laid sideways over the lanes it
+            explains, so the swatch above a dot and the dot itself are the same
+            place in the photograph.
+
+            It is the *print's* colours, not the scene's — the same maths the
+            canvas runs, so at ten seconds the strip is as black as the photo
+            while the dots under it are already climbing. A strip of the scene's
+            colours would be a fourth thing to reconcile, and worse, it would
+            contradict the print sitting next to it.
+
+            Aria-hidden like the stack it captions: twelve colours read aloud is
+            noise, and the marker's own aria-valuetext already says in words
+            which dyes this column holds back. */}
+        <div
+          class="colstrip"
+          data-testid="colstrip"
+          aria-hidden="true"
+          style={`--left:${LANE_START - LANE_PITCH / 2}%; --width:${LANE_SPAN + LANE_PITCH}%`}
+        >
+          <span class="colstrip__key">Top of the column</span>
+          <span class="colstrip__band">
+            {
+              Array.from({ length: PER_TEAM }, (_, i) => (
+                <span class="colstrip__cell" data-cell={i} />
+              ))
+            }
+          </span>
+        </div>
+
         <div class="stack" aria-hidden="true">
           {
             LAYERS.map((layer) => (
@@ -202,7 +241,7 @@ const BARS = [
                          the pitch would put a team's dot nearer its
                          neighbour's lane than its own. 0.45 clears an 8px dot
                          at both marking widths and still reads as a column. */
-                      39 + (i + (t - 1) * 0.45) * (56 / (PER_TEAM - 1))
+                      LANE_START + (i + (t - 1) * 0.45) * LANE_PITCH
                     }%; --lag:${i / (PER_TEAM * 2)}`}
                     data-i={i}
                   />

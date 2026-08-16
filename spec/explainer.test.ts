@@ -183,3 +183,52 @@ describe("what the page claims about the film", () => {
     expect(b).toBeLessThan(60);
   });
 });
+
+describe("the strip over the lanes maps the photo onto the diagram", () => {
+  const strip = doc.querySelector<HTMLElement>('[data-testid="colstrip"]');
+  const cells = doc.querySelectorAll<HTMLElement>(".colstrip__cell");
+  const dots = doc.querySelectorAll<HTMLElement>(".runner--cyan");
+
+  // Percentages out of an inline style attribute. The strip's geometry is
+  // handed down from the same two constants the lanes are, so this is checking
+  // the arithmetic between them, not re-deriving it.
+  const pct = (el: Element | null, prop: string): number =>
+    Number(/(-?[\d.]+)%/.exec(el?.getAttribute("style")?.match(new RegExp(`${prop}\\s*:\\s*([^;]+)`))?.[1] ?? "")?.[1]);
+
+  it("has one swatch per sample the dots are keyed to", () => {
+    expect(strip, "the strip has to be in the shipped HTML, not drawn by script").toBeTruthy();
+    expect(cells.length).toBe(dots.length);
+  });
+
+  it("puts a swatch centre over every cluster of dots", () => {
+    // Equal cells across the band, so cell i's centre is left + (i + 0.5) * cellWidth.
+    // If that does not land on the dots it captions, the strip is decoration
+    // sitting near the diagram rather than a key to it.
+    const left = pct(strip, "--left");
+    const width = pct(strip, "--width");
+    const cell = width / cells.length;
+
+    // Against the mean of the three teams, not any one of them: each team is
+    // nudged sideways off the lane so the arrivals do not hide behind each
+    // other, so a single team's --lane is deliberately off centre and only the
+    // cluster as a whole marks the sample position. Written the wrong way round
+    // first, and this test is why that was caught before a screenshot was.
+    const at = (t: string, i: number): number =>
+      pct(doc.querySelectorAll<HTMLElement>(`.runner--${t}`)[i], "--lane");
+
+    for (let i = 0; i < cells.length; i++) {
+      const centre = (at("yellow", i) + at("magenta", i) + at("cyan", i)) / 3;
+      expect(left + (i + 0.5) * cell, `swatch ${i} has to sit over its dots`).toBeCloseTo(centre, 6);
+    }
+  });
+
+  it("stays out of the accessibility tree, where twelve colours are noise", () => {
+    // The marker's aria-valuetext already says which dyes this column holds
+    // back, in words. This is the same fact for the eyes.
+    expect(strip?.getAttribute("aria-hidden")).toBe("true");
+    expect(
+      doc.querySelector('[data-testid="slice"]')?.getAttribute("aria-valuetext"),
+      "which is only true while the marker still describes itself",
+    ).toBeTruthy();
+  });
+});

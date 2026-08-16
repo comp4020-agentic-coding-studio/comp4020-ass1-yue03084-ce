@@ -15,7 +15,7 @@ import {
   type Scene,
   type TeamId,
 } from "./film";
-import { attachPhoto, type Rgb } from "./photo";
+import { attachPhoto, developedRgb, type Rgb } from "./photo";
 import { makeSound } from "./sound";
 
 const stack = document.querySelector<HTMLElement>(".stack");
@@ -23,6 +23,7 @@ const clock = document.querySelector<HTMLElement>('[data-testid="clock"]');
 const scrub = document.querySelector<HTMLInputElement>('[data-testid="time"]');
 const receive = document.querySelector<HTMLElement>(".layer--receive");
 const runners = document.querySelectorAll<HTMLElement>(".runner");
+const cells = document.querySelectorAll<HTMLElement>(".colstrip__cell");
 const scenes = document.querySelectorAll<HTMLInputElement>('[data-testid="scene"]');
 const chip = document.querySelector<HTMLElement>('[data-testid="photo-mini"]');
 const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-testid="photo"]');
@@ -134,6 +135,18 @@ function show(): void {
     const staged = clamp01((run - lag * 0.15) / spread);
     runner.style.setProperty("--p", (exposed ? staged * STUCK_REACH : staged).toFixed(4));
     runner.dataset.stuck = String(exposed && run > 0.85);
+  }
+
+  // The strip over the lanes: the same twelve samples the dots are keyed to,
+  // developed to the same instant the canvas is. Recomputed every frame rather
+  // than only when the marker moves, because its whole job is to be the photo's
+  // colour right now — a strip that only changed on drag would go stale during
+  // autoplay, which is exactly when someone is watching it.
+  for (const cell of cells) {
+    const sample = samples[Number(cell.dataset.cell)];
+    if (!sample) continue;
+    const rgb = developedRgb(sample, seconds).map(Math.round);
+    cell.style.setProperty("--c", `rgb(${rgb.join(" ")})`);
   }
 
   // The chip in the sticky bar is the print at a glance, so it reads the
