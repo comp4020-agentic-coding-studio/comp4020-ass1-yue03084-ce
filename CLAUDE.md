@@ -34,6 +34,24 @@ and see `spec/README.md` for how the checks in this repo relate to it.
   [the course site](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/backpressure/#agent-browser-the-rendered-page-as-ground-truth),
   works well for this). The rendered page is the truth; your mental model of it
   isn't.
+- **Don't `cd`.** Put the directory in the command instead --- `pnpm -C <repo>`,
+  `git -C <repo>` --- and give scripts absolute paths. The shell's working
+  directory persists between tool calls, so one `cd` into `/tmp` to poke at a
+  probe silently pollutes every command after it. `pnpm` fails loudly when it
+  lands somewhere without a `package.json`; `git` in a *different* repo does
+  not, and neither does a relative path that happens to resolve.
+- **Before trusting a measurement, know which build it read.** This one is
+  written from two failures, not from caution. Once `pnpm check` never ran
+  (wrong directory, above) while `pnpm preview` kept serving the previous
+  `dist/`, so the probe reported a fix hadn't worked when it had. Once a CDP
+  probe reused one tab across navigations, Chrome left the rules consuming
+  `--tilt` unrecomputed, and the probe reported the exploded view was flat when
+  it wasn't. Same shape both times, and it is the worst shape a bug can have:
+  **a lying instrument is worse than no instrument, because it argues for
+  editing code that is already correct.** So a probe must say what it measured
+  --- print the `mtime` of the `dist/index.html` it read --- and must open a
+  fresh tab per measurement. If a probe says nothing changed, suspect the probe
+  before the code.
 - When a check fails, read its output before changing anything. Each check below
   names what it measures, and the failure message is the instruction: it tells
   you the file, the line, or the contract. Treat a red check as authoritative
