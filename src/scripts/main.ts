@@ -23,6 +23,12 @@ const clock = document.querySelector<HTMLElement>('[data-testid="clock"]');
 const scrub = document.querySelector<HTMLInputElement>('[data-testid="time"]');
 const receive = document.querySelector<HTMLElement>(".layer--receive");
 const runners = document.querySelectorAll<HTMLElement>(".runner");
+const rays = document.querySelectorAll<HTMLElement>(".ray");
+const verdicts = new Map(
+  [...document.querySelectorAll<HTMLElement>("[data-verdict]")].map(
+    (el) => [el.dataset.verdict as TeamId, el] as const,
+  ),
+);
 const cells = document.querySelectorAll<HTMLElement>(".colstrip__cell");
 const scenes = document.querySelectorAll<HTMLInputElement>('[data-testid="scene"]');
 const chip = document.querySelector<HTMLElement>('[data-testid="photo-mini"]');
@@ -73,6 +79,18 @@ function exposureOf(team: TeamId, sample: Rgb | undefined): number {
 
 function resample(): void {
   samples = view ? view.column(sliceX, SAMPLES) : [];
+  paintExposure();
+}
+
+/** How much of this column exposed the layer this dye lives in.
+ *
+ *  Shared by the marker's spoken summary and the exploded view's verdicts on
+ *  purpose: they are two renderings of one fact, and two thresholds for one
+ *  fact is how a page ends up saying "cyan stalls here" in words while the
+ *  slab beside it says the layer saw nothing. */
+function share(team: TeamId): number {
+  if (!samples.length) return 0;
+  return samples.filter((s) => exposureOf(team, s) >= 0.5).length / samples.length;
 }
 
 const list = (xs: readonly string[]): string =>
@@ -100,9 +118,6 @@ function sliceSummary(): string {
   if (!samples.length) return where;
 
   const teams: TeamId[] = ["cyan", "magenta", "yellow"];
-  const share = (team: TeamId): number =>
-    samples.filter((s) => exposureOf(team, s) >= 0.5).length / samples.length;
-
   const all = teams.filter((team) => share(team) >= 0.75);
   const some = teams.filter((team) => share(team) >= 0.25 && share(team) < 0.75);
 
@@ -116,6 +131,49 @@ function sliceSummary(): string {
   if (!some.length) return `${where} — ${whole}`;
   if (!all.length) return `${where} — ${part}`;
   return `${where} — ${whole}, ${list(some)} only in part of it`;
+}
+
+// --- the exposure moment --------------------------------------------------
+
+/** What the layer sensitive to this dye's colour saw, for the label on its slab.
+ *
+ *  The same three-quarters bar the marker's summary uses, and for the same
+ *  reason: a column is twelve readings and a slab carries one label, so a label
+ *  that speaks for the whole column has to have the whole column behind it. The
+ *  dots in the lanes still carry the per-sample truth — this is the summary over
+ *  them, not a second opinion about them. */
+function verdictFor(team: TeamId): string {
+  const f = share(team);
+  if (f >= 0.75) return `saw its light — ${team} dye develops here and gets stuck`;
+  if (f < 0.25) return `saw nothing — ${team} dye climbs to the top`;
+  return `saw part of it — ${team} dye sticks there, climbs elsewhere`;
+}
+
+/** The beams, and the verdicts under them.
+ *
+ *  A beam carries the light that fell on one place in the column, and each
+ *  sensitive layer takes its own component out of it: blue-sensitive is nearest
+ *  the lens, so blue goes first, then green, then red, and what reaches the base
+ *  is nothing. Writing three colours per beam and letting one CSS gradient
+ *  interpolate between them keeps the absorption a property of the layer's own
+ *  span rather than of a fixed pixel offset that would go wrong the moment the
+ *  stack is pulled apart.
+ *
+ *  Called from resample(), not from show(). The clock does not appear anywhere
+ *  in here and must not: exposure happened once, inside the camera, before the
+ *  print came out — the beams are the one thing on this page that is not a
+ *  function of time. */
+function paintExposure(): void {
+  for (const ray of rays) {
+    const sample = samples[Number(ray.dataset.ray)];
+    if (!sample) continue;
+    const [r, g, b] = sample.map(Math.round);
+    ray.style.setProperty("--l0", `rgb(${r} ${g} ${b})`);
+    ray.style.setProperty("--l1", `rgb(${r} ${g} 0)`);
+    ray.style.setProperty("--l2", `rgb(${r} 0 0)`);
+  }
+
+  for (const [team, el] of verdicts) el.textContent = verdictFor(team);
 }
 
 // --- one frame ------------------------------------------------------------

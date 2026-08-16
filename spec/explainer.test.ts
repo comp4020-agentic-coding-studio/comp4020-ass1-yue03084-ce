@@ -197,6 +197,98 @@ describe("what the page claims about the film", () => {
   });
 });
 
+describe("the exploded view explains the exposure", () => {
+  const stack = doc.querySelector('[data-testid="film"] .stack');
+  const beams = doc.querySelectorAll<HTMLElement>(".ray");
+  const dots = doc.querySelectorAll<HTMLElement>(".runner--cyan");
+
+  const styleOf = (el: Element | null, prop: string): string =>
+    el?.getAttribute("style")?.match(new RegExp(`${prop}\\s*:\\s*([^;]+)`))?.[1]?.trim() ?? "";
+  const num = (el: Element | null, prop: string): number => Number(/(-?[\d.]+)/.exec(styleOf(el, prop))?.[1]);
+
+  it("shines one beam per sample, on the lanes the dots already use", () => {
+    // A beam is a place in the photograph, exactly as a lane is. If these ever
+    // stop being the same set of places, the diagram is drawing light landing
+    // somewhere other than where it reports the consequence.
+    expect(beams.length, "the beams have to be in the shipped HTML, not drawn by script").toBe(dots.length);
+    const at = (t: string, i: number): number => num(doc.querySelectorAll(`.runner--${t}`)[i], "--lane");
+    for (let i = 0; i < beams.length; i++) {
+      const centre = (at("yellow", i) + at("magenta", i) + at("cyan", i)) / 3;
+      expect(num(beams[i], "--lane"), `beam ${i} has to land on the dots it causes`).toBeCloseTo(centre, 6);
+    }
+  });
+
+  it("cuts each beam where the explosion actually put that layer", () => {
+    // The beams are drawn over a stack whose slabs have been translated apart,
+    // so a cut written against the *collapsed* boundaries drops its colour in
+    // mid-air. Each cut therefore has to carry the same --o its own slab does,
+    // which is what this reads: the multiplier on --gap in the cut, against the
+    // --o on the layer it belongs to.
+    const rays = doc.querySelector(".rays");
+    const gapTerm = (cut: string): number => {
+      const m = /([+-])\s*([\d.]+)\s*\*\s*var\(--gap\)/.exec(styleOf(rays, `--cut-${cut}`));
+      expect(m, `--cut-${cut} has to move with its layer`).toBeTruthy();
+      return Number(`${m![1]}${m![2]}`);
+    };
+    const depth = (cut: string): number =>
+      Number(/var\(--stack-h\)\s*\*\s*([\d.]+)/.exec(styleOf(rays, `--cut-${cut}`))?.[1]);
+
+    for (const [layer, top, bottom] of [
+      ["blue", "b0", "b1"],
+      ["green", "g0", "g1"],
+      ["red", "r0", "r1"],
+    ]) {
+      const o = num(doc.querySelector(`.layer--${layer}`), "--o");
+      expect(gapTerm(top), `${layer}'s beam cut rides on its own slab`).toBe(o);
+      expect(gapTerm(bottom)).toBe(o);
+      expect(depth(bottom), `${layer} absorbs across its own span, not at a line`).toBeGreaterThan(depth(top));
+    }
+
+    // And in the order the sandwich meets the light: blue first, red last.
+    expect(depth("b1")).toBeLessThanOrEqual(depth("g0"));
+    expect(depth("g1")).toBeLessThanOrEqual(depth("r0"));
+  });
+
+  it("gives every layer that sees light somewhere to say what it saw", () => {
+    // The pairing is the whole rule, and it is the pairing a refactor is most
+    // likely to get backwards: the layer sensitive to a colour holds the dye
+    // that absorbs that same colour. Blue-sensitive keeps yellow, and yellow is
+    // the dye that takes blue out.
+    for (const [layer, dye] of [
+      ["blue", "yellow"],
+      ["green", "magenta"],
+      ["red", "cyan"],
+    ]) {
+      expect(
+        doc.querySelector(`.layer--${layer} [data-verdict="${dye}"]`),
+        `${layer}-sensitive is where ${dye} lives, so it is where ${dye}'s verdict goes`,
+      ).toBeTruthy();
+    }
+    expect(doc.querySelectorAll("[data-verdict]").length, "and nowhere else — the other two see nothing").toBe(3);
+  });
+
+  it("keeps all of it out of the accessibility tree, where the marker already says it", () => {
+    // The beams and the verdicts are a picture of which dyes this column holds
+    // back. The marker's aria-valuetext is a sentence saying the same thing,
+    // computed from the same samples over the same threshold, and it is already
+    // announced on every move — a second copy would be the same fact read twice.
+    expect(stack?.getAttribute("aria-hidden")).toBe("true");
+    expect(doc.querySelector('[data-testid="slice"]')?.getAttribute("aria-valuetext")).toBeTruthy();
+  });
+
+  it("leaves the collapsed view alone", () => {
+    // Nothing here may cost the default view anything: the beams are opacity 0
+    // and the verdicts are display:none until the checkbox is on, so the page
+    // as it first loads is the development-over-time diagram it always was.
+    const css = readFileSync(resolve("src/styles/global.css"), "utf8");
+    expect(/\.ray\s*\{[^}]*opacity:\s*0/.test(css), ".ray starts invisible").toBe(true);
+    expect(/\.layer__verdict\s*\{[^}]*display:\s*none/.test(css), "verdicts start unrendered").toBe(true);
+    for (const verdict of doc.querySelectorAll("[data-verdict]")) {
+      expect(verdict.textContent, "and the markup ships no verdict it has not measured").toBe("");
+    }
+  });
+});
+
 describe("the strip over the lanes maps the photo onto the diagram", () => {
   const strip = doc.querySelector<HTMLElement>('[data-testid="colstrip"]');
   const cells = doc.querySelectorAll<HTMLElement>(".colstrip__cell");

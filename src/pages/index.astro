@@ -1,18 +1,33 @@
 ---
 import Camera from "../components/Camera.astro";
 import Layout from "../layouts/Layout.astro";
-import { SCENES } from "../scripts/film";
+import { SCENES, type TeamId } from "../scripts/film";
+
+interface Layer {
+  readonly id: string;
+  readonly span: number;
+  readonly name: string;
+  readonly note: string;
+  /** The dye that lives here — which is also the dye whose fate the exploded
+   *  view reports, since a layer that caught light develops it and in doing so
+   *  pins its own dye. Absent on the layers that never see any. */
+  readonly dye?: TeamId;
+}
 
 // The film sandwich, top (viewing surface) to bottom, as percentages of the
 // stack's height. Runners climb from their home layer to the receiving layer,
 // so every position here is also an animation target — keep them in sync with
 // the --home/--dest values handed to each runner below.
-const LAYERS = [
+//
+// The order is also the order the light meets them, which is why the beams
+// below can be built out of this list rather than out of a second copy of it:
+// blue-sensitive is nearest the lens and red-sensitive is furthest from it.
+const LAYERS: readonly Layer[] = [
   { id: "receive", span: 14, name: "Receiving layer", note: "the picture forms here" },
   { id: "reagent", span: 20, name: "Reagent", note: "opaque at first, then white" },
-  { id: "blue", span: 15, name: "Blue-sensitive", note: "yellow dye lives here" },
-  { id: "green", span: 15, name: "Green-sensitive", note: "magenta dye lives here" },
-  { id: "red", span: 15, name: "Red-sensitive", note: "cyan dye lives here" },
+  { id: "blue", span: 15, name: "Blue-sensitive", note: "yellow dye lives here", dye: "yellow" },
+  { id: "green", span: 15, name: "Green-sensitive", note: "magenta dye lives here", dye: "magenta" },
+  { id: "red", span: 15, name: "Red-sensitive", note: "cyan dye lives here", dye: "cyan" },
   { id: "base", span: 21, name: "Base", note: "opaque backing" },
 ];
 
@@ -22,6 +37,33 @@ const LAYERS = [
 // dragging the whole diagram off one end.
 const MID = (LAYERS.length - 1) / 2;
 const offset = (id: string): number => LAYERS.findIndex((l) => l.id === id) - MID;
+
+// Where a beam of light gives up each of its three components, as a distance
+// down the beam. A beam is one element with one gradient, so every cut in it
+// has to be a length — and it has to be the boundary *after* the explosion has
+// moved it: the layer's edge in the collapsed stack, plus the same --o * --gap
+// the slab itself is translated by. Drop that second term and the beam loses
+// its blue in the air above the blue-sensitive slab, in the only view that
+// draws it.
+const edge = (id: string, side: "top" | "bottom"): string => {
+  const i = LAYERS.findIndex((l) => l.id === id);
+  const above = LAYERS.slice(0, i).reduce((n, l) => n + l.span, 0);
+  const at = side === "top" ? above : above + LAYERS[i].span;
+  const o = offset(id);
+  // Written with an explicit sign rather than interpolating a negative number:
+  // `calc(a + -0.5 * b)` is a parse most of the way to nonsense, and a beam
+  // whose gradient fails to parse is a beam that silently does not appear.
+  const shift = `${o < 0 ? "-" : "+"} ${Math.abs(o)} * var(--gap)`;
+  return `calc(var(--lead) + var(--stack-h) * ${at / 100} ${shift})`;
+};
+
+const CUTS = [
+  ["b", "blue"],
+  ["g", "green"],
+  ["r", "red"],
+]
+  .map(([k, id]) => `--cut-${k}0:${edge(id, "top")}; --cut-${k}1:${edge(id, "bottom")}`)
+  .join("; ");
 
 // Where each dye team starts: the vertical centre of its home layer, and the
 // layer whose plane it sits on once the stack is pulled apart. A runner
@@ -208,7 +250,16 @@ const BARS = [
           </span>
         </div>
 
-        <div class="stack" aria-hidden="true">
+        {/* Two numbers the layers and the beams both need, handed down from
+            here so neither can be quietly re-derived: where the dot lanes
+            start, which is also where the label column has to stop, and how
+            far the topmost slab lifts when the stack is pulled apart, which is
+            how far above the stack the light has to come in from. */}
+        <div
+          class="stack"
+          aria-hidden="true"
+          style={`--lanes:${LANE_START}%; --lift:${-offset("receive")}`}
+        >
           {
             LAYERS.map((layer) => (
               <div
@@ -217,9 +268,38 @@ const BARS = [
               >
                 <span class="layer__name">{layer.name}</span>
                 <span class="layer__note">{layer.note}</span>
+                {layer.dye && <span class="layer__verdict" data-verdict={layer.dye} />}
               </div>
             ))
           }
+
+          {/* The exposure moment, which the exploded view exists to show. One
+              beam per sample, on the same lanes the dots use, carrying the
+              light that actually fell on that place in the column.
+
+              The scene's light, not the print's: exposure happened once, in
+              the camera, and nothing the clock does afterwards can change it.
+              That is also why these are painted from resample() rather than
+              from show() — the beams are the one thing on this page that is
+              not a function of time.
+
+              Each beam loses a component inside the layer sensitive to that
+              component, so a layer that visibly dims the beam is a layer that
+              had work to do, and its dye is the one that will not arrive. The
+              verdict spans above say the same thing in words, for the layers
+              where a reader should not have to judge a brightness.
+
+              Collapsed, the beams are transparent and the verdicts are
+              display:none, so that view stays exactly the development-over-time
+              diagram it already was. */}
+          <div class="rays" style={CUTS}>
+            <span class="rays__key">Light from the scene</span>
+            {
+              Array.from({ length: PER_TEAM }, (_, i) => (
+                <span class="ray" data-ray={i} style={`--lane:${LANE_START + i * LANE_PITCH}%`} />
+              ))
+            }
+          </div>
 
           <div class="runners">
             {
@@ -295,7 +375,7 @@ const BARS = [
 
       <label class="toggle">
         <input type="checkbox" id="explode" data-testid="explode" />
-        <span>Tip the stack back and pull the layers apart</span>
+        <span>Tip the stack back and trace the light through it</span>
       </label>
 
       {/* Pause only exists while there is something to pause. A dead control

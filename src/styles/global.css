@@ -362,6 +362,30 @@ html[data-explode="true"] .layer {
   opacity: 0.72;
 }
 
+/* What this layer saw, in words, for the three layers that see anything. The
+   beams are the picture of it and this is the reading of the picture — a
+   reader should not have to judge "is that beam dimmer than the one above" to
+   learn whether a dye is about to get stuck.
+
+   Only in the exploded view: collapsed, the diagram is about time, and a
+   verdict about an exposure that finished before the clock started would be
+   answering a question nobody is asking yet.
+
+   Capped at the label column, because the alternative is a sentence with
+   twelve vertical beams drawn across it. --lanes comes from the markup that
+   places the dots, so the two cannot drift. */
+.layer__verdict {
+  display: none;
+  max-width: calc(var(--lanes) - 1.4rem);
+  font-size: 0.6rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+html[data-explode="true"] .layer__verdict {
+  display: block;
+}
+
 /* The one slab on the page whose colour is data rather than decoration: empty
    gelatine at zero, and by the end whatever the dye that got here adds up to —
    which is near-black for a scene that sends everything, and near-white for
@@ -382,6 +406,21 @@ html[data-explode="true"] .layer {
 .layer--reagent .layer__name,
 .layer--reagent .layer__note {
   color: hsl(0deg 0% calc((1 - var(--clear, 0)) * 92%));
+}
+
+/* A sensitive layer is 15% of the stack, foreshortened by the tilt, and the
+   name, the note and the verdict are three things that do not fit in it —
+   measured at 1920, where the note pushed the verdict's last line just past
+   the slab's own edge. The note is the one that goes: it says where a dye
+   lives, which the verdict below it repeats by naming that dye, and it is the
+   only one of the three that says the same thing every time you look at it.
+
+   It sits down here rather than beside .layer__verdict because it has to come
+   after the reagent's own .layer__note rule: that one is less specific, and
+   stylelint reads a lower specificity arriving later as a rule that can no
+   longer be sure it wins. */
+html[data-explode="true"] .layer__note {
+  display: none;
 }
 
 .layer--blue {
@@ -473,6 +512,112 @@ html[data-explode="true"] .layer {
    label, which matters because the stack has no room for one. */
 .runner[data-stuck="true"] {
   opacity: 0.45;
+}
+
+/* --- the light going in -------------------------------------------------- */
+
+/* Same shape as .runners: an overlay on the stack that keeps preserve-3d, so
+   its children sit in the stack's own tipped space rather than on a flat sheet
+   in front of it.
+
+   Note what is *not* here: opacity. A grouping value other than 1 flattens
+   preserve-3d, so fading this container in would collapse the beams onto one
+   plane for the length of the transition and then pop them back — the fade
+   belongs on the leaves, which have no 3-D children to lose. */
+.rays {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+
+  /* How far above the stack the light arrives from, and it has to be measured
+     against the *exploded* stack, not the collapsed one. The receiving layer is
+     the slab that lifts furthest — --lift gaps, straight up out of .stack's own
+     box — so a fixed lead that looked generous flat had the beams starting
+     inside the receiving layer once the stack was pulled apart. Which is the
+     one place light must not start.
+
+     The 1.4rem on top is the clear air above the topmost slab, and it is what
+     the exploded .colstrip margin is paying for: the strip is the *print's*
+     colours and these beams are the *scene's*, so they have to arrive out of a
+     gap rather than appear to fall out of the strip. Ten seconds in, one of
+     those is black and the other is bright. */
+  --lead: calc(var(--lift) * var(--gap) + 1.4rem);
+}
+
+/* Counter-rotated to face the reader, like the dots, and for the same reason:
+   the top of the stack is the edge tipped furthest away, and a label lying flat
+   up there is a sliver. */
+.rays__key {
+  position: absolute;
+  left: 0;
+  top: calc(-1 * var(--lead) - 0.2rem);
+  color: var(--dim);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  opacity: 0;
+  transform: rotateX(calc(-1 * var(--tilt))) translateZ(3px);
+  transition: opacity 220ms ease;
+}
+
+.rays__key::after {
+  content: " \2193";
+}
+
+.ray {
+  position: absolute;
+  left: var(--lane);
+  top: calc(-1 * var(--lead));
+
+  /* Ends where the light does. The last stop of the gradient is the bottom of
+     the red-sensitive layer, so sizing the box to it means the faint channel
+     outline stops there too — a beam outlined all the way to the base would
+     say the light got through, which is the one thing this diagram is here to
+     deny. */
+  height: var(--cut-r1);
+  width: 0.3rem;
+  margin-left: -0.15rem;
+  border-radius: 0.15rem;
+
+  /* The three components, taken out one layer at a time in the order the
+     sandwich meets them. Between a layer's two cuts the colour interpolates:
+     absorption happens *through* the layer, not instantly at its surface. In
+     the air between two slabs it holds flat, because nothing there absorbs
+     anything.
+     --l0/--l1/--l2 are written per beam by main.ts from that sample's own
+     light; the fallbacks are transparent so a beam before the first frame is
+     absent rather than black. */
+  background: linear-gradient(
+    to bottom,
+    var(--l0, #0000) 0,
+    var(--l0, #0000) var(--cut-b0),
+    var(--l1, #0000) var(--cut-b1),
+    var(--l1, #0000) var(--cut-g0),
+    var(--l2, #0000) var(--cut-g1),
+    var(--l2, #0000) var(--cut-r0),
+    #0000 var(--cut-r1)
+  );
+
+  /* A beam carrying almost nothing is almost invisible against slabs this
+     dark, and an invisible beam and an absent beam look the same. The hairline
+     keeps the channel readable so "this one arrived empty" stays a thing the
+     reader can see rather than infer. */
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
+
+  /* The fade lives on the beam and not on .rays for the reason given up there:
+     an opacity on the container would flatten the 3-D space it exists to keep. */
+  opacity: 0;
+
+  /* 3px, against the dots' 6px: in front of the slabs, behind the dots. The
+     beam is the cause and the dots are the consequence, and a consequence
+     hidden behind its own cause is a diagram arguing with itself. */
+  transform: translateZ(3px);
+  transition: opacity 220ms ease;
+}
+
+html[data-explode="true"] .rays__key,
+html[data-explode="true"] .ray {
+  opacity: 1;
 }
 
 /* --- the camera ---------------------------------------------------------- */
@@ -1276,10 +1421,15 @@ html[data-explode="true"] .film figcaption {
 
 /* The mirror of the caption's margin. Pulling the stack apart lifts the top
    layer clear of .stack's own box — the height is fixed, so the layers overflow
-   it — and the strip is the one thing sitting in that overflow. Same distance
-   the caption gives the bottom layer. */
+   it — and the strip is the one thing sitting in that overflow.
+
+   It used to be 2.6rem, the caption's own figure, bought for the receiving
+   layer alone. The beams now arrive above that layer and carry a label above
+   them, so the same gap has three things stacked in it — measured at 1920,
+   where the old figure printed "Light from the scene" across "Receiving
+   layer". */
 html[data-explode="true"] .colstrip {
-  margin-bottom: 2.6rem;
+  margin-bottom: 4.4rem;
 }
 
 @media (width <= 40rem) {
@@ -1292,7 +1442,25 @@ html[data-explode="true"] .colstrip {
   }
 
   html[data-explode="true"] .colstrip {
-    margin-bottom: 1.8rem;
+    margin-bottom: 3.4rem;
+  }
+
+  /* A sensitive layer here is 15% of 22rem — 52px of slab for a label that had
+     72px at 1920 — so the verdict has to give back a line. Measured: the longest
+     of the three ("saw part of it — magenta dye sticks there, climbs elsewhere")
+     wrapped to four lines and overflowed its slab by 3px, and the two levers are
+     both cheap. The clearance to the first beam drops from 1.4rem to 0.7rem,
+     which is still a visible gap and buys the ~10% of width that turns those
+     four lines into three. */
+  .layer__verdict {
+    max-width: calc(var(--lanes) - 0.7rem);
+    font-size: 0.56rem;
+    line-height: 1.15;
+  }
+
+  /* Smaller dose of clear air, same as the tilt and the gap get. */
+  .rays {
+    --lead: calc(var(--lift) * var(--gap) + 1rem);
   }
 }
 
